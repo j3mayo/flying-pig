@@ -1,5 +1,5 @@
 /* Offline shell: the app opens without signal; data syncs when back online. */
-const C = "fp-shell-v1";
+const C = "fp-shell-v2";
 self.addEventListener("install", e => { e.waitUntil(caches.open(C).then(c => c.addAll(["./", "apple-touch-icon.png", "icon-192.png", "manifest.webmanifest"]))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== C).map(x => caches.delete(x))))); self.clients.claim(); });
 self.addEventListener("fetch", e => {
