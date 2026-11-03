@@ -66,7 +66,7 @@ button.row:active{background:var(--fill)}
 .row .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .v{flex:none;max-width:52%;overflow:hidden;text-overflow:ellipsis}
 .wrapok .t,.wrapok .s{white-space:normal}
-.info{width:30px;height:30px;border-radius:50%;border:0;background:var(--fill);color:var(--tint);font:700 15px var(--font-d);cursor:pointer;flex:none}
+.info{width:24px;height:24px;border-radius:50%;border:0;background:var(--fill);color:var(--tint);font:700 14px/1 Georgia,"Times New Roman",serif;font-style:italic;cursor:pointer;flex:none;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .hero{padding:4px 4px 14px}
 .hero .big{font:700 28px/1.15 var(--font-d);font-variant-numeric:tabular-nums}
 .hero .pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
@@ -218,6 +218,9 @@ nav.tabs .in{grid-template-columns:repeat(5,1fr)}
 .meter{height:5px;border-radius:3px;background:var(--fill);overflow:hidden;margin-top:6px}.meter div{height:100%;border-radius:3px}
 .wtool{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 4px 14px}
 .wtool button{border:0;background:var(--fill);color:var(--tint);border-radius:999px;min-height:44px;padding:0 16px;font-weight:600;font-size:15px;cursor:pointer}
+.ex.ss{border-left:3px solid var(--tint);padding-left:10px}
+.ex.ss-mid{margin-bottom:10px}
+.ss-cap{color:var(--tint);padding:2px 4px 8px}
 .wtool .wh{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wtool button,.sugbtns button,.ex-h .swap,.rest button,.btn-big,.pill,.seg button,.scale button,.del,.lnk,.nav-btn{white-space:nowrap}
 .btn-big{overflow:hidden;text-overflow:ellipsis}
@@ -887,16 +890,32 @@ function wPause(){ if(W&&!W.pausedAt){ W.pausedAt=new Date().toISOString(); stop
 function wResume(){ if(W&&W.pausedAt){ W.pausedMs=(W.pausedMs||0)+Math.max(0,Date.now()-new Date(W.pausedAt).getTime()); W.pausedAt=null; } }
 function wCounts(){ let n=0,d=0; W.exercises.forEach(e=>{ e.sets.forEach(s=>{n++; if(s.done)d++;}); }); return {n,d}; }
 const PTTAG='<span class="tagpt">PT</span>';
+/* Supersets: exercises whose blocks share a letter (A1 + A2) alternate set by set, with the full rest only after each round. */
+const grpOf=e=>{ if(!e||e.simple) return null; const m=/^([A-Z])\d+$/.exec(String(e.block||"")); return m?m[1]:null; };
+function members(ei){ const g=grpOf(W.exercises[ei]); if(!g) return [ei]; const out=[]; W.exercises.forEach((x,i)=>{ if(grpOf(x)===g) out.push(i); }); return out.length>1?out:[ei]; }
+function nextAfter(ei, si){
+  const mem=members(ei), p=mem.indexOf(ei), lbl=(k,j)=>W.exercises[k].name+", set "+(j+1);
+  if(mem.length>1){ for(let q=p+1;q<mem.length;q++){ const k=mem[q], st=W.exercises[k].sets[si]; if(st&&!st.done) return {kind:"ss", e:k, s:si, label:lbl(k,si)}; }
+    const maxSets=Math.max(...mem.map(k=>W.exercises[k].sets.length)), rest=Math.max(...mem.map(k=>W.exercises[k].rest||0));
+    for(let j=0;j<maxSets;j++) for(const k of mem){ const st=W.exercises[k].sets[j]; if(st&&!st.done) return {kind:"rest", sec:rest, e:k, s:j, label:lbl(k,j)}; } }
+  else { const j=W.exercises[ei].sets.findIndex(x=>!x.done); if(j>-1) return {kind:"rest", sec:W.exercises[ei].rest, e:ei, s:j, label:lbl(ei,j)}; }
+  const last=Math.max(...mem); for(let k=last+1;k<W.exercises.length;k++){ const x=W.exercises[k]; if(x.simple) continue; const j=x.sets.findIndex(y=>!y.done); if(j>-1) return {kind:"rest", sec:Math.max(...mem.map(i=>W.exercises[i].rest||0)), e:k, s:j, label:lbl(k,j)}; }
+  return null; }
+let wCue=false;
+function cueNext(label){ clearInterval(wTick); wCue=true; wEnd=Date.now(); wNext=label; if(W){ W.restEnd=0; W.restNext=""; } wTick=setInterval(()=>{ if(Date.now()>wEnd+25000) stopRest(); },1000); tickRest(); }
+function scrollToSet(e,s){ setTimeout(()=>{ const el=sh.querySelector(`.sg input[data-e="${e}"][data-s="${s}"]`); if(el) el.closest(".sg").scrollIntoView({behavior:"smooth", block:"center"}); },60); }
 function renderWorkout(){
   const c=wCounts(), sc=sh.querySelector(".sh-body"), keep=sc?sc.scrollTop:0, paused=!!W.pausedAt;
   let lastBlock=null;
   const body = W.exercises.map((e,ei)=>{
     const head = (e.block==="Prep"||e.block==="Finish") && e.block!==lastBlock ? `<div class="cap" style="padding-top:4px">${e.block==="Prep"?"Warm-up":"Cool-down"}</div>` : ""; lastBlock=e.block;
     if(e.simple) return `${head}<div class="ex" style="margin-bottom:8px"><div class="sets simple"><div style="min-width:0"><div style="font-weight:600">${esc(e.name)}${e.pt?PTTAG:""}</div>${e.target?`<div class="ex-cue" style="padding:0">${esc(e.target)}</div>`:""}</div><button type="button" class="ck" data-w="tick" data-e="${ei}" data-s="0" aria-pressed="${!!e.sets[0].done}" aria-label="${esc(e.name)} done" style="${e.sets[0].done?"background:var(--good);color:#fff":""}">${CHECK}</button></div></div>`;
+    const g=grpOf(e), mem=g?members(ei):[ei], ss=mem.length>1, first=ss&&mem[0]===ei, lastM=ss&&mem[mem.length-1]===ei;
+    const ssHead = first? `<div class="cap ss-cap">Superset ${esc(g)} · alternate sets, rest after each round</div>` : "";
     const prev=prevFor(e.id, W.date);
     const L=S.loads.find(x=>x.id===e.id)||{}; const tl=[L.hold,L.tempo].filter(Boolean).join(" · ");
     const infoId=S.loads.find(x=>x.id===e.id)?e.id:"";
-    return `${head}<div class="ex"><div class="ex-h">${infoId?`<button type="button" data-act="exinfo" data-id="${esc(infoId)}"><h3>${esc(e.name)}</h3><span class="info" aria-hidden="true">i</span></button>`:`<h3 style="margin:0;font:600 19px var(--font-d);color:var(--tint)">${esc(e.name)}</h3>`}<button type="button" class="swap" data-w="swap" data-e="${ei}" aria-label="Swap ${esc(e.name)}">Swap</button></div>
+    return `${head}${ssHead}<div class="ex${ss?" ss":""}${ss&&!lastM?" ss-mid":""}"><div class="ex-h">${infoId?`<button type="button" data-act="exinfo" data-id="${esc(infoId)}"><h3>${esc(e.name)}</h3><span class="info" aria-hidden="true">i</span></button>`:`<h3 style="margin:0;font:600 19px var(--font-d);color:var(--tint)">${esc(e.name)}</h3>`}<button type="button" class="swap" data-w="swap" data-e="${ei}" aria-label="Swap ${esc(e.name)}">Swap</button></div>
       <div class="ex-cue">${esc(e.target)}${e.pt?PTTAG:""}${e.swappedFrom?` · instead of ${esc(e.swappedFrom)}`:""}${tl?" · "+esc(tl):""}</div>
       <div class="sets"><div class="sg hd"><span style="text-align:center">Set</span><span>Previous</span><span style="text-align:center">lb</span><span style="text-align:center">Reps${esc(e.unit)}</span><span></span></div>
       ${e.sets.map((s,si)=>{ const pv=prev[si]||prev[prev.length-1], del=wDel===ei+":"+si; return `<div class="sg ${s.done?"done":""}"><button type="button" class="no" data-w="setmenu" data-e="${ei}" data-s="${si}" aria-label="Set ${si+1} options">${si+1}</button><span class="pv">${pv?esc((pv.load||"")+" × "+(pv.reps||"")):"–"}</span><input inputmode="decimal" data-f="load" data-e="${ei}" data-s="${si}" value="${esc(s.load)}" aria-label="Set ${si+1} weight"><input inputmode="numeric" data-f="reps" data-e="${ei}" data-s="${si}" value="${esc(s.reps)}" aria-label="Set ${si+1} reps">${del?`<button type="button" class="del" data-w="delset" data-e="${ei}" data-s="${si}">Delete</button>`:`<button type="button" class="ck" data-w="tick" data-e="${ei}" data-s="${si}" aria-pressed="${!!s.done}" aria-label="Set ${si+1} done">${CHECK}</button>`}</div>`; }).join("")}
@@ -916,11 +935,12 @@ function renderWorkout(){
 }
 function tickRest(){ const box=document.getElementById("wRest"); if(!box) return; if(!wEnd){ box.hidden=true; return; }
   const left=Math.ceil((wEnd-Date.now())/1000); box.hidden=false;
+  if(wCue){ document.getElementById("wTm").textContent="Go"; document.getElementById("wTm").style.color="var(--tint)"; document.getElementById("wNx").textContent="Superset · now: "+wNext; return; }
   document.getElementById("wTm").textContent = left>0? Math.floor(left/60)+":"+pad(left%60) : "Go";
   document.getElementById("wTm").style.color = left>0? "" : "var(--good)";
   document.getElementById("wNx").textContent = (left>0?"Rest · next: ":"Next: ")+wNext; }
-function startRest(sec,next){ if(!sec) return stopRest(); wEnd=Date.now()+sec*1000; wNext=next; if(W){ W.restEnd=wEnd; W.restNext=next; } clearInterval(wTick); wTick=setInterval(()=>{ tickRest(); if(Date.now()>wEnd+8000) stopRest(); },500); tickRest(); }
-function stopRest(){ clearInterval(wTick); wEnd=0; wNext=""; if(W){ W.restEnd=0; W.restNext=""; } tickRest(); }
+function startRest(sec,next){ wCue=false; if(!sec) return stopRest(); wEnd=Date.now()+sec*1000; wNext=next; if(W){ W.restEnd=wEnd; W.restNext=next; } clearInterval(wTick); wTick=setInterval(()=>{ tickRest(); if(Date.now()>wEnd+8000) stopRest(); },500); tickRest(); }
+function stopRest(){ clearInterval(wTick); wCue=false; wEnd=0; wNext=""; if(W){ W.restEnd=0; W.restNext=""; } tickRest(); }
 function saveLocalW(){ if(!W) return; W.updatedAt=new Date().toISOString(); try{ localStorage.setItem("fp-w", JSON.stringify(W)); }catch(_){} }
 async function persistWorkout(){ if(!W) return; saveLocalW(); if(!db) return; wLast=W; if(wInFlight){ wDirty=true; return; } wInFlight=true;
   try{ do{ wDirty=false; const doc=wLast; await db.collection("liftlog").doc(doc.date).set(JSON.parse(JSON.stringify(doc))); }while(wDirty); }catch(err){ failed(err); } finally{ wInFlight=false; } }
@@ -967,9 +987,8 @@ sh.addEventListener("click", e=>{
   if(w==="delset"){ grabNotes(); const ex=W.exercises[+b.dataset.e]; ex.sets.splice(+b.dataset.s,1); wDel=""; persistWorkout(); renderWorkout(); return; }
   if(w==="add"){ grabNotes(); wDel=""; const ex=W.exercises[+b.dataset.e], last=ex.sets[ex.sets.length-1]||{}; ex.sets.push({load:last.load||"", reps:last.reps||"", done:false}); persistWorkout(); renderWorkout(); return; }
   if(w==="tick"){ grabNotes(); wDel=""; if(W.pausedAt) wResume(); const ei=+b.dataset.e, si=+b.dataset.s, ex=W.exercises[ei], s=ex.sets[si]; s.done=!s.done;
-    if(s.done&&!ex.simple){ const ns=ex.sets.findIndex(x=>!x.done), nx=W.exercises.slice(ei+1).find(x=>!x.simple&&x.sets.some(y=>!y.done));
-      if(ns>-1) startRest(ex.rest, ex.name+", set "+(ns+1)); else if(nx) startRest(ex.rest, nx.name); else stopRest(); }
-    persistWorkout(); renderWorkout(); }
+    let go=null; if(s.done&&!ex.simple){ go=nextAfter(ei,si); if(!go) stopRest(); else if(go.kind==="ss") cueNext(go.label); else startRest(go.sec, go.label); }
+    persistWorkout(); renderWorkout(); if(go) scrollToSet(go.e, go.s); }
 });
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden"){ if(W){ grabNotes(); persistWorkout(); } else draftSave(); } });
 
@@ -1187,6 +1206,6 @@ window.addEventListener("hashchange",()=>{ const h=location.hash.slice(1); if(TA
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.03.2131";</script>
+<script>window.FP_VERSION="2026.11.03.2148";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>
