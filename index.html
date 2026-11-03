@@ -235,6 +235,8 @@ nav.tabs .in{grid-template-columns:repeat(5,1fr)}
 .sugbtns{display:flex;gap:8px;flex:none}
 .sugbtns button{border:0;border-radius:999px;min-height:44px;padding:0 16px;font-weight:600;font-size:14px;cursor:pointer;background:var(--fill);color:var(--label-2)}
 .sugbtns button.yes{background:var(--tint);color:var(--on-tint)}
+.ptc{flex:none;min-width:52px;height:36px;border-radius:999px;border:0;background:var(--fill);color:var(--label-2);font:600 15px var(--font);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;white-space:nowrap}
+.ptc.full{background:var(--good);color:#fff}.ptc svg{width:18px;height:18px}
 .ms-when{font-size:13px;color:var(--label-2);text-align:right;white-space:nowrap;flex:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
@@ -406,7 +408,7 @@ return { ready: !!sb, makeDb, makeAssets, blobSrc, extractText, session, showAut
 <script>
 (function(){
 const RACE = "2027-05-02";
-const S = {plan:{}, runs:[], loads:[], liftlog:{}, daily:{}, settings:{}, goals:null, goalSug:null, gear:null, milestones:null, requests:[], updates:[], loaded:false};
+const S = {plan:{}, runs:[], loads:[], liftlog:{}, daily:{}, settings:{}, goals:null, goalSug:null, ptDaily:null, gear:null, milestones:null, requests:[], updates:[], loaded:false};
 let assets = null, reqDraft = {kind:"change", files:[]};
 let db = null, tab = "today", liftDay = null, rq = false;
 try{ const t = localStorage.getItem("fp_tab"); if(t) tab = t; }catch(e){}
@@ -528,7 +530,7 @@ function viewToday(){
     const pill = ll ? (ll.status==="in_progress"?`<span class="pill warn">Open</span>`:`<span class="pill good">Done</span>`) : "";
     rows+=`<button class="row" type="button" data-act="liftsheet" data-day="${esc(p.lift)}"><span class="ico lift">${ICON.lift}</span><div class="main"><div class="t">Day ${esc(p.lift)} · ${esc(LIFT_NAMES[p.lift]||"")}</div><div class="s">${n} exercises${p.liftNote?" · "+esc(p.liftNote):""}</div></div>${pill}${CHEV}</button>`;
   }
-  if(p&&p.extra) rows+=`<div class="row"><span class="ico extra">${ICON.extra}</span><div class="main"><div class="t">Shrug + incline T/Y</div><div class="s">PT work after the run</div></div></div>`;
+  if(p&&p.extra) rows+=`<div class="row"><span class="ico extra">${ICON.extra}</span><div class="main"><div class="t">${esc(String(p.extra).replace(/^PT:\s*/,""))}</div><div class="s">PT work after the run</div></div></div>`;
   if(p&&p.soccer) rows+=`<div class="row"><span class="ico soc">${ICON.soc}</span><div class="main"><div class="t">Soccer</div><div class="s">Hard day</div></div></div>`;
   if(!rows) rows=`<div class="row"><span class="ico rest">${ICON.rest}</span><div class="main"><div class="t">Rest day</div><div class="s">Recovery is training too</div></div></div>`;
   const btn = p&&p.lift ? `<div style="margin-top:12px"><button class="btn-big" type="button" data-act="workout" data-day="${esc(p.lift)}">${ll&&ll.status==="in_progress"?"Resume Workout":ll?"Open Workout":"Start Workout"}</button></div>` : "";
@@ -544,10 +546,17 @@ function viewToday(){
     <div class="ring-stat"><div class="k" style="color:var(--lift)">Lifts</div><div class="n">${liftsDone}<small> / ${liftPlan}</small></div></div>
     <div class="ring-stat"><div class="k" style="color:var(--label-2)">Race</div><div class="n">${daysBetween(t,RACE)}<small> days</small></div></div></div></div>
   <div class="sec"><div class="sec-h"><h2>Plan</h2>${fresh?`<button class="lnk" type="button" data-act="updates">${fresh} update${fresh>1?"s":""}</button>`:""}</div><div class="group">${rows}</div>${btn}</div>
+  ${ptCard(t)}
   ${feelDone?"":feelCard(t)}
   <div class="sec"><div class="sec-h"><h2>This Week</h2></div><div class="group wk">${strip}</div></div>
   <div class="sec"><div class="sec-h"><h2>Coming Up</h2></div><div class="group">${upcoming(t)}</div></div>`;
 }
+function ptCard(t){ const items=(S.ptDaily&&S.ptDaily.items)||[]; if(!items.length) return ""; const got=(S.daily[t]&&S.daily[t].pt)||{};
+  const done=items.filter(x=>(got[x.id]||0)>=(x.target||1)).length;
+  return `<div class="sec"><div class="sec-h"><h2>PT Today</h2><span class="foot" style="padding:0">${done} of ${items.length} done</span></div><div class="group">${items.map(x=>{ const n=got[x.id]||0, tg=x.target||1, full=n>=tg;
+    return `<div class="row"><div class="main"><div class="t">${esc(x.name)}</div><div class="s">${esc(x.dose)} · ${esc(x.freq||"")}</div></div><button type="button" class="ptc${full?" full":""}" data-act="ptinc" data-id="${esc(x.id)}" aria-label="${esc(x.name)}: ${n} of ${tg}">${full?CHECK:(tg>1?`${n}/${tg}`:"")}</button></div>`; }).join("")}</div><div class="foot">Tap after each round. Tap a finished one to reset it.</div></div>`; }
+async function ptInc(id){ const t=todayISO(), it=((S.ptDaily&&S.ptDaily.items)||[]).find(x=>x.id===id); if(!it) return; const cur=Object.assign({}, S.daily[t]||{}), pt=Object.assign({}, cur.pt||{}); const tg=it.target||1;
+  pt[id]=(pt[id]||0)>=tg?0:(pt[id]||0)+1; try{ await db.collection("daily").doc(t).set(Object.assign(cur,{date:t, pt})); }catch(err){ failed(err); } }
 function shortRun(r){ return (r.label||("Easy "+r.miles+" mi")).replace(/\s*\(long run\)/i," long run").replace(/\s*\(.*?\)\s*/g," ").trim(); }
 let feelDraft = {}; try{ const f=JSON.parse(localStorage.getItem("fp-feel")||"null"); if(f&&f.date===todayISO()) feelDraft=f.v||{}; }catch(_){}
 function feelCard(t){
@@ -1073,7 +1082,7 @@ function addEx(a){ W.exercises.push(buildEx("x-"+Date.now().toString(36), a.name
 function actsFor(d){ const p=S.plan[d]||{}, out=[];
   if(p.run&&p.run.miles>0) out.push({c:"var(--run)", t:shortRun(p.run), s:p.run.miles+" mi"});
   if(p.lift) out.push({c:"var(--lift)", t:"Day "+p.lift+" · "+(LIFT_NAMES[p.lift]||""), s:""});
-  if(p.extra) out.push({c:"#5856D6", t:"PT: shrug + incline T/Y", s:""});
+  if(p.extra) out.push({c:"#5856D6", t:/^PT/.test(p.extra)?p.extra:"PT: "+p.extra, s:""});
   if(p.soccer) out.push({c:"var(--warn)", t:"Soccer", s:"Hard day"});
   return out; }
 function dateBlock(d, cls){ const x=parse(d); return `<div class="dt ${cls||""}"><div class="w">${DOW[x.getDay()].toUpperCase()}</div><div class="n">${x.getDate()}</div></div>`; }
@@ -1084,7 +1093,7 @@ function upcoming(t){
 function daySheet(d){ const p=S.plan[d]||{};
   let h=""; if(p.run&&p.run.miles>0) h+=`<div class="sec"><div class="cap">Run</div><div class="group"><div class="row"><span class="ico run">${ICON.run}</span><div class="main"><div class="t">${esc(shortRun(p.run))}</div></div><div class="v">${esc(p.run.miles)} mi</div></div>${p.run.detail?`<p class="para">${esc(p.run.detail)}</p>`:""}</div></div>`;
   if(p.lift) h+=`<div class="sec"><div class="cap">Day ${esc(p.lift)} · ${esc(LIFT_NAMES[p.lift]||"")}${p.liftNote?" · "+esc(p.liftNote):""}</div><div class="group">${exFor(p.lift).map(exRow).join("")}</div></div>`;
-  if(p.extra) h+=`<div class="sec"><div class="cap">PT</div><div class="group"><div class="row"><span class="ico extra">${ICON.extra}</span><div class="main"><div class="t">Shrug + incline T/Y</div><div class="s">From your PT plan</div></div></div></div></div>`;
+  if(p.extra) h+=`<div class="sec"><div class="cap">PT</div><div class="group"><div class="row"><span class="ico extra">${ICON.extra}</span><div class="main"><div class="t">${esc(String(p.extra).replace(/^PT:\s*/,""))}</div><div class="s">From your PT plan</div></div></div></div></div>`;
   if(p.soccer) h+=`<div class="sec"><div class="cap">Soccer</div><div class="group"><div class="row"><span class="ico soc">${ICON.soc}</span><div class="main"><div class="t">Full-intensity soccer</div><div class="s">Counts as a hard day</div></div></div></div></div>`;
   if(p.note) h+=`<div class="sec"><div class="cap">Note</div><div class="group"><p class="para">${esc(p.note)}</p></div></div>`;
   openSheet(navBar(navBtn("close","Close"), esc(longDate(d))+(p.week!=null?`<small>Week ${esc(p.week)}</small>`:""), "")+`<div class="sh-body">${h||'<div class="group"><div class="empty">Rest day. Recovery is training too.</div></div>'}</div>`); }
@@ -1166,7 +1175,7 @@ document.addEventListener("click", e=>{
     newreq:()=>reqForm(a.dataset.pre), attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),
     goal:()=>goalSheet(a.dataset.i), goalsave:()=>saveGoal(a.dataset.i), goaldel:()=>saveGoal(a.dataset.i,true),
-    daysheet:()=>daySheet(a.dataset.d), sugadd:()=>sugAct(a.dataset.id,true), sugno:()=>sugAct(a.dataset.id,false),
+    daysheet:()=>daySheet(a.dataset.d), ptinc:()=>ptInc(a.dataset.id), sugadd:()=>sugAct(a.dataset.id,true), sugno:()=>sugAct(a.dataset.id,false),
     altreq:()=>{ const x=exAlt[+a.dataset.k]; if(!x||!exAltFor) return; save(db.collection("requests").doc(Date.now().toString(36)), {created:new Date().toISOString(), kind:"change", status:"pending", reply:"", attachments:[], text:`Swap ${exAltFor.name} for ${x.name} going forward (${x.load} · ${x.scheme}). Equipment.`}, "Swap requested. Reviewed tonight."); },
     signout:()=>FP.signOut(), liftsheet:()=>liftSheet(a.dataset.day), workout:()=>startWorkout(a.dataset.day||"A")}[act]||(()=>{}))();
 });
@@ -1201,11 +1210,12 @@ window.addEventListener("hashchange",()=>{ const h=location.hash.slice(1); if(TA
   db.collection("updates").onSnapshot(s=>{ S.updates=s.docs.map(d=>Object.assign({id:d.id},d.data())); queue(); },()=>{});
   db.doc("settings/goals").onSnapshot(d=>{ S.goals=d.exists?d.data():null; queue(); },()=>{});
   db.doc("settings/goalSuggestions").onSnapshot(d=>{ S.goalSug=d.exists?d.data():null; queue(); },()=>{});
+  db.doc("settings/ptDaily").onSnapshot(d=>{ S.ptDaily=d.exists?d.data():null; queue(); },()=>{});
   db.start();
 })();
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.03.2148";</script>
+<script>window.FP_VERSION="2026.11.03.2157";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>
