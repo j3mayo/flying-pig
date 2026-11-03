@@ -466,7 +466,7 @@ function dayStatus(d){
   if(p.skipped) return "miss";
   return d < todayISO() ? "miss" : "";
 }
-const LIFT_NAMES = {A:"Upper Strength", B:"Lower Strength", C:"Power", D:"Upper Hypertrophy"};
+const LIFT_NAMES = {A:"Upper Strength", B:"Lower Strength", C:"Power", D:"Upper Hypertrophy", P:"PT Session"};
 const exFor = day => S.loads.filter(l=>l.day===day).sort((a,b)=>(a.order||0)-(b.order||0));
 
 /* ---------- charts ---------- */
@@ -530,7 +530,9 @@ function viewToday(){
     const pill = ll ? (ll.status==="in_progress"?`<span class="pill warn">Open</span>`:`<span class="pill good">Done</span>`) : "";
     rows+=`<button class="row" type="button" data-act="liftsheet" data-day="${esc(p.lift)}"><span class="ico lift">${ICON.lift}</span><div class="main"><div class="t">Day ${esc(p.lift)} · ${esc(LIFT_NAMES[p.lift]||"")}</div><div class="s">${n} exercises${p.liftNote?" · "+esc(p.liftNote):""}</div></div>${pill}${CHEV}</button>`;
   }
-  if(p&&p.extra) rows+=`<div class="row"><span class="ico extra">${ICON.extra}</span><div class="main"><div class="t">${esc(String(p.extra).replace(/^PT:\s*/,""))}</div><div class="s">PT work after the run</div></div></div>`;
+  if(p&&p.extra){ const pl=S.liftlog[t], has=exFor("P").length; const pill=pl&&pl.day==="P"?(pl.status==="in_progress"?`<span class="pill warn">Open</span>`:`<span class="pill good">Done</span>`):"";
+    rows+= has? `<button class="row" type="button" data-act="workout" data-day="P"><span class="ico extra">${ICON.extra}</span><div class="main"><div class="t">PT Session</div><div class="s">${esc(String(p.extra).replace(/^PT:\s*/,""))}</div></div>${pill}${CHEV}</button>`
+      : `<div class="row"><span class="ico extra">${ICON.extra}</span><div class="main"><div class="t">${esc(String(p.extra).replace(/^PT:\s*/,""))}</div><div class="s">PT work after the run</div></div></div>`; }
   if(p&&p.soccer) rows+=`<div class="row"><span class="ico soc">${ICON.soc}</span><div class="main"><div class="t">Soccer</div><div class="s">Hard day</div></div></div>`;
   if(!rows) rows=`<div class="row"><span class="ico rest">${ICON.rest}</span><div class="main"><div class="t">Rest day</div><div class="s">Recovery is training too</div></div></div>`;
   const btn = p&&p.lift ? `<div style="margin-top:12px"><button class="btn-big" type="button" data-act="workout" data-day="${esc(p.lift)}">${ll&&ll.status==="in_progress"?"Resume Workout":ll?"Open Workout":"Start Workout"}</button></div>` : "";
@@ -601,9 +603,9 @@ function viewLifts(){
     return `<div class="row"><div class="main"><div class="t">${esc(l.name)}</div><div class="s">Est. max ${Math.round(last)} lb${dl?` · <span class="${dl>0?"up":"down"}">${dl>0?"+":""}${dl} since ${shortDate(pts[0].x)}</span>`:""}</div></div>${spark}</div>`; }).join("");
   const sessions=Object.values(S.liftlog).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
   return `<h1 class="large">Lifts</h1><div class="sub">Tap an exercise for how-to, swaps and history</div>
-  <div class="seg" role="group" aria-label="Lift day">${["A","B","C","D"].map(d=>`<button type="button" data-lday="${d}" aria-pressed="${d===liftDay}">Day ${d}</button>`).join("")}</div>
+  <div class="seg" role="group" aria-label="Lift day">${["A","B","C","D","P"].map(d=>`<button type="button" data-lday="${d}" aria-pressed="${d===liftDay}">${d==="P"?"PT":"Day "+d}</button>`).join("")}</div>
   <div class="sec"><div class="sec-h"><h2>${esc(LIFT_NAMES[liftDay])}</h2></div><div class="group">${list||'<div class="empty">No exercises saved.</div>'}</div>
-    <div style="margin-top:12px"><button class="btn-big" type="button" data-act="workout" data-day="${liftDay}">Start Day ${liftDay}</button></div></div>
+    <div style="margin-top:12px"><button class="btn-big" type="button" data-act="workout" data-day="${liftDay}">${liftDay==="P"?"Start PT Session":"Start Day "+liftDay}</button></div></div>
   <div class="sec"><div class="sec-h"><h2>Strength Progress</h2></div><div class="group">${prog||'<div class="empty">Shows once main lifts are logged.</div>'}</div><div class="foot">Estimated max from your best set (Epley formula)</div></div>
   <div class="sec"><div class="sec-h"><h2>History</h2><button class="lnk" type="button" data-act="loglift">Quick log</button></div><div class="group">${sessions.length? sessions.map(s=>`<div class="row"><div class="main"><div class="t">Day ${esc(s.day)} · ${esc(fmtDate(s.date))}</div>${s.notes?`<div class="s">${esc(s.notes)}</div>`:""}</div>${s.exercises?`<div class="v">${s.exercises.reduce((a,e)=>a+e.sets.filter(x=>x.done).length,0)} sets</div>`:""}${s.status==="in_progress"?'<span class="pill warn">Open</span>':""}</div>`).join(""):'<div class="empty">No sessions yet.</div>'}</div></div>`;
 }
@@ -929,7 +931,7 @@ function renderWorkout(){
       <div class="sets"><div class="sg hd"><span style="text-align:center">Set</span><span>Previous</span><span style="text-align:center">lb</span><span style="text-align:center">Reps${esc(e.unit)}</span><span></span></div>
       ${e.sets.map((s,si)=>{ const pv=prev[si]||prev[prev.length-1], del=wDel===ei+":"+si; return `<div class="sg ${s.done?"done":""}"><button type="button" class="no" data-w="setmenu" data-e="${ei}" data-s="${si}" aria-label="Set ${si+1} options">${si+1}</button><span class="pv">${pv?esc((pv.load||"")+" × "+(pv.reps||"")):"–"}</span><input inputmode="decimal" data-f="load" data-e="${ei}" data-s="${si}" value="${esc(s.load)}" aria-label="Set ${si+1} weight"><input inputmode="numeric" data-f="reps" data-e="${ei}" data-s="${si}" value="${esc(s.reps)}" aria-label="Set ${si+1} reps">${del?`<button type="button" class="del" data-w="delset" data-e="${ei}" data-s="${si}">Delete</button>`:`<button type="button" class="ck" data-w="tick" data-e="${ei}" data-s="${si}" aria-pressed="${!!s.done}" aria-label="Set ${si+1} done">${CHECK}</button>`}</div>`; }).join("")}
       <button type="button" class="addset" data-w="add" data-e="${ei}">+ Add Set</button></div></div>`; }).join("");
-  sh.innerHTML = navBar(`<button class="nav-btn" type="button" data-w="close">Close</button>`, `Day ${esc(W.day)} · ${esc(LIFT_NAMES[W.day]||"")}<small><span id="wEl">${elapsed()}</span> · ${c.d}/${c.n} done</small>`, `<button class="nav-btn" type="button" data-w="finish" style="font-weight:600">Finish</button>`)
+  sh.innerHTML = navBar(`<button class="nav-btn" type="button" data-w="close">Close</button>`, `${W.day==="P"?"PT Session":`Day ${esc(W.day)} · ${esc(LIFT_NAMES[W.day]||"")}`}<small><span id="wEl">${elapsed()}</span> · ${c.d}/${c.n} done</small>`, `<button class="nav-btn" type="button" data-w="finish" style="font-weight:600">Finish</button>`)
     + `<div class="wp"><div style="width:${c.n?Math.round(c.d/c.n*100):0}%"></div></div>`
     + `<div class="sh-body">
       <div class="wtool"><div style="display:flex;gap:8px"><button type="button" data-w="pause" class="${paused?"on":""}">${paused?"Resume":"Pause"}</button><button type="button" data-w="reset">${wReset?"Confirm":"Reset"}</button></div><span class="foot wh" style="padding:0;text-align:right">Tap a set # to delete</span></div>
@@ -1216,6 +1218,6 @@ window.addEventListener("hashchange",()=>{ const h=location.hash.slice(1); if(TA
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.03.2157";</script>
+<script>window.FP_VERSION="2026.11.03.2202";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>
