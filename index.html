@@ -212,6 +212,7 @@ nav.tabs .in{grid-template-columns:repeat(5,1fr)}
 .num .v small{font-size:13px;color:var(--label-2);font-weight:500}
 .num .d{font-size:13px;color:var(--label-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pillar svg{display:block;width:100%;height:auto;margin-top:12px}
+.pillar .ph .ico svg{width:18px;height:18px;margin:0}
 .pillar .why{font-size:13px;color:var(--label-2);margin-top:10px;line-height:1.4;border-top:.5px solid var(--sep);padding-top:10px}
 .meter{height:5px;border-radius:3px;background:var(--fill);overflow:hidden;margin-top:6px}.meter div{height:100%;border-radius:3px}
 .wtool{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 4px 14px}
@@ -1080,7 +1081,7 @@ function viewHealth(){
   const lifts=["a1","b1","b3","a3","d3"].map(liftE1).filter(Boolean);
   let strSt=null; if(lifts.some(l=>l.pts.length>=3)){ const ch=mean(lifts.filter(l=>l.pts.length>=3).map(l=>(l.last-l.first)/l.first)); strSt={st:Math.abs(ch)<.02?"steady":ch>0?"improving":"watch"}; }
   const card=(icoCls,ico,title,status,nums,chart,why)=>`<div class="pillar"><div class="ph"><span class="ico ${icoCls}">${ico}</span><h3>${title}</h3>${stPill(status)}</div><div class="nums">${nums}</div>${chart}<div class="why">${why}</div></div>`;
-  const num=(k,v,u,d)=>`<div class="num"><div class="k">${k}</div><div class="v">${v}<small> ${u}</small></div><div class="d">${d}</div></div>`;
+  const num=(k,v,u,d)=>`<div class="num"><div class="k">${k}</div><div class="v">${v}${v==="–"||!u?"":`<small> ${u}</small>`}</div><div class="d">${d}</div></div>`;
   const chart=(pts,label,color,invert,dp)=>pts.length>=2?lineChart(pts,{label, color, invert, empty:"", fmt:v=>(+v).toFixed(dp||0)}):"";
   const rhrS=series("rhr",t), vo2S=series("vo2",t,180), hrvS=rolling(Object.values(S.daily).filter(d=>d.date>=addDays(t,-90)),"hrv",7), wtS=series("weight",t);
   const heart=card("run",ICON.heart,"Heart & Fitness",pillarStatus([vo2,rhr,epSt]),
