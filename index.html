@@ -218,6 +218,9 @@ nav.tabs .in{grid-template-columns:repeat(5,1fr)}
 .meter{height:5px;border-radius:3px;background:var(--fill);overflow:hidden;margin-top:6px}.meter div{height:100%;border-radius:3px}
 .wtool{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 4px 14px}
 .wtool button{border:0;background:var(--fill);color:var(--tint);border-radius:999px;min-height:44px;padding:0 16px;font-weight:600;font-size:15px;cursor:pointer}
+.wtool .wh{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wtool button,.sugbtns button,.ex-h .swap,.rest button,.btn-big,.pill,.seg button,.scale button,.del,.lnk,.nav-btn{white-space:nowrap}
+.btn-big{overflow:hidden;text-overflow:ellipsis}
 .wtool button.on{background:var(--tint);color:var(--on-tint)}
 .paused{display:flex;align-items:center;justify-content:space-between;gap:12px;background:color-mix(in srgb,var(--warn) 14%,var(--card));border-radius:12px;padding:12px 14px;margin-bottom:18px}
 .ex-h .swap{border:0;background:var(--fill);color:var(--tint);border-radius:999px;font-size:15px;font-weight:600;min-height:36px;padding:0 14px;cursor:pointer;flex:none}
@@ -611,7 +614,7 @@ function viewYou(){
   <div class="sec"><div class="sec-h"><h2>Milestones</h2><button class="lnk" type="button" data-act="ms">Edit</button></div><div class="group">${ms.map(m=>`<div class="day" style="cursor:default">${dateBlock(m.date, daysBetween(t,m.date)<=14?"soon":"")}<div class="acts"><div class="act"><span class="tx" style="font-weight:600">${esc(m.title)}</span></div><div class="act"><span class="sm">${esc(MON[parse(m.date).getMonth()])} ${parse(m.date).getFullYear()}</span></div></div><div class="ms-when">${when(m.date)}</div></div>`).join("")||'<div class="empty">No upcoming milestones.</div>'}</div></div>
   <div class="sec"><div class="sec-h"><h2>Shoes</h2><button class="lnk" type="button" data-act="gear" data-id="new">Add</button></div><div class="group">${gear.map(g=>{ const mi=shoeMiles(g), pct=Math.min(100,Math.round(mi/500*100)); return `<button class="row" type="button" data-act="gear" data-id="${esc(g.id)}"><div class="main"><div class="t">${esc(g.name)}</div><div class="meter"><div style="width:${pct}%;background:${mi>=400?"var(--warn)":"var(--run)"}"></div></div><div class="s">${g.default?"Default · ":""}since ${esc(shortDate(g.since))}</div></div><div class="v" style="color:${mi>=400?"var(--warn)":"var(--label)"};font-weight:600">${mi} mi</div>${CHEV}</button>`; }).join("")||'<button class="row" type="button" data-act="gear" data-id="new"><div class="main"><div class="t" style="color:var(--tint)">Add your running shoes</div><div class="s">Tracks miles so you know when to replace them</div></div></button>'}</div>${gear.length?'<div class="foot">Replace around 300 to 500 mi</div>':""}</div>
   <div class="sec"><div class="sec-h"><h2>History</h2></div><div class="group"><button class="row" type="button" data-act="checkins"><div class="main"><div class="t">All check-ins</div></div>${CHEV}</button><button class="row" type="button" data-act="logday"><div class="main"><div class="t">Add a check-in for another day</div></div>${CHEV}</button></div></div>
-  <div class="sec"><div class="group"><button class="row" type="button" data-act="signout"><div class="main"><div class="t" style="color:var(--bad)">Sign Out</div></div></button></div></div>`;
+  <div class="sec"><div class="group"><button class="row" type="button" data-act="signout"><div class="main"><div class="t" style="color:var(--bad)">Sign Out</div></div></button></div><div class="foot" style="text-align:center;padding-top:10px">Healthspan · version ${esc(window.FP_VERSION||"")}</div></div>`;
 }
 const DEFAULT_MS=[{date:"2026-12-13",title:"9 mi long run checkpoint"},{date:"2026-12-16",title:"5K time trial"},{date:"2026-12-27",title:"Go / no-go for 18-week build"},{date:"2027-03-20",title:"Tune-up race 1"},{date:"2027-04-03",title:"Tune-up race 2"},{date:"2027-05-02",title:"Flying Pig Marathon"}];
 const msItems=()=>[...((S.milestones&&S.milestones.items)||DEFAULT_MS)].sort((a,b)=>a.date.localeCompare(b.date));
@@ -901,7 +904,7 @@ function renderWorkout(){
   sh.innerHTML = navBar(`<button class="nav-btn" type="button" data-w="close">Close</button>`, `Day ${esc(W.day)} · ${esc(LIFT_NAMES[W.day]||"")}<small><span id="wEl">${elapsed()}</span> · ${c.d}/${c.n} done</small>`, `<button class="nav-btn" type="button" data-w="finish" style="font-weight:600">Finish</button>`)
     + `<div class="wp"><div style="width:${c.n?Math.round(c.d/c.n*100):0}%"></div></div>`
     + `<div class="sh-body">
-      <div class="wtool"><div style="display:flex;gap:8px"><button type="button" data-w="pause" class="${paused?"on":""}">${paused?"Resume":"Pause"}</button><button type="button" data-w="reset">${wReset?"Tap to confirm":"Reset Timer"}</button></div><span class="foot" style="padding:0;text-align:right">Tap a set number to delete it</span></div>
+      <div class="wtool"><div style="display:flex;gap:8px"><button type="button" data-w="pause" class="${paused?"on":""}">${paused?"Resume":"Pause"}</button><button type="button" data-w="reset">${wReset?"Confirm":"Reset"}</button></div><span class="foot wh" style="padding:0;text-align:right">Tap a set # to delete</span></div>
       ${paused?`<div class="paused"><div><div style="font-weight:600">Workout paused</div><div class="foot" style="padding:2px 0 0">The timer is stopped. Your sets are saved.</div></div><button class="btn-big" type="button" data-w="pause" style="width:auto;padding:0 18px;min-height:40px">Resume</button></div>`:""}
       ${body}
       <button type="button" class="btn-big sec2" data-w="addex" style="margin-bottom:22px">+ Add Exercise</button>
@@ -1184,5 +1187,6 @@ window.addEventListener("hashchange",()=>{ const h=location.hash.slice(1); if(TA
 })();
 </script>
 
-<script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});</script>
+<script>window.FP_VERSION="2026.11.03.2131";</script>
+<script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>
