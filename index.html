@@ -648,7 +648,8 @@ async function saveMs(){
   await save(db.doc("settings/milestones"), {items, updated:todayISO()}, "Milestones saved");
 }
 function statusPill(s){ s=s||"pending"; const c={pending:"tint",applied:"good",done:"good","needs chat":"warn",declined:"bad"}[s]||""; const l={pending:"Pending",applied:"Applied",done:"Applied","needs chat":"Needs chat",declined:"Not applied"}[s]||s; return `<span class="pill ${c}">${esc(l)}</span>`; }
-function exRow(e){ const right=[e.load,e.scheme].filter(Boolean).join(" · ");
+function exRow(e){ if((e.block==="Prep"||e.block==="Finish")&&/,/.test(e.name||"")) return splitSimple(e).map(x=>`<button class="row" type="button" data-act="exinfo" data-id="${esc(e.id)}"><div class="main"><div class="t">${esc(x.name)}${e.pt?'<span class="tagpt">PT</span>':""}</div><div class="s">${e.block==="Prep"?"Warm-up":"Cool-down"}</div></div><div class="v">${esc(x.target)}</div>${CHEV}</button>`).join("");
+  const right=[e.load,e.scheme].filter(Boolean).join(" · ");
   return `<button class="row" type="button" data-act="exinfo" data-id="${esc(e.id)}"><div class="main"><div class="t">${esc(e.name)}</div>${e.tempo||e.hold?`<div class="s">${esc([e.hold,e.tempo].filter(Boolean).join(" · "))}</div>`:""}</div><div class="v">${esc(right)}</div>${CHEV}</button>`; }
 
 /* ---------- render ---------- */
