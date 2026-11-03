@@ -621,7 +621,7 @@ function viewYou(){
   const t=todayISO();
   const goals=((S.goals&&S.goals.items)||[]).map((it,i)=>`<button class="row" type="button" data-act="goal" data-i="${i}"><span class="ico run">${ICON.heart}</span><div class="main"><div class="t">${esc(it.title)}</div>${it.detail?`<div class="s">${esc(it.detail)}</div>`:""}</div>${it.status?`<span class="pill ${it.status==="on track"?"good":it.status==="watch"?"warn":"tint"}">${esc(it.status)}</span>`:""}${CHEV}</button>`).join("");
   const sug=sugItems().map(x=>`<div class="row wrapok"><span class="ico note">${ICON.extra}</span><div class="main"><div class="t">${esc(x.title)}</div>${x.why||x.detail?`<div class="s">${esc(x.why||x.detail)}</div>`:""}</div><div class="sugbtns"><button type="button" data-act="sugno" data-id="${esc(x.id)}" aria-label="Dismiss ${esc(x.title)}">No</button><button type="button" class="yes" data-act="sugadd" data-id="${esc(x.id)}">Add</button></div></div>`).join("");
-  const reqs=[...S.requests].sort((a,b)=>String(b.created).localeCompare(String(a.created))).slice(0,5).map(r=>`<button class="row" type="button" data-act="req" data-id="${esc(r.id)}"><span class="ico ${r.kind==="pt"?"extra":"note"}">${r.kind==="pt"?ICON.extra:ICON.note}</span><div class="main"><div class="t">${esc(r.text)}</div><div class="s">${r.kind==="pt"?"PT update":"Request"} · ${esc(shortDate(String(r.created).slice(0,10)))}</div></div>${statusPill(r.status)}</button>`).join("");
+  const reqs=[...S.requests].sort((a,b)=>String(b.created).localeCompare(String(a.created))).slice(0,5).map(r=>`<button class="row" type="button" data-act="req" data-id="${esc(r.id)}"><span class="ico ${r.kind==="pt"?"extra":"note"}">${r.kind==="pt"?ICON.extra:ICON.note}</span><div class="main"><div class="t">${esc(r.text)}</div><div class="s">${r.kind==="pt"?"PT update":r.kind==="app"?"App change":"Request"} · ${esc(shortDate(String(r.created).slice(0,10)))}</div></div>${statusPill(r.status)}</button>`).join("");
   const ups=[...S.updates].sort((a,b)=>String(b.date+b.id).localeCompare(String(a.date+a.id))).slice(0,5).map(u=>`<button class="row" type="button" data-act="upd" data-id="${esc(u.id)}"><div class="main"><div class="t">${esc(u.title)}</div><div class="s">${esc(u.detail||"")}</div></div><div class="v" style="font-size:15px">${esc(shortDate(u.date))}</div>${CHEV}</button>`).join("");
   const ms=msItems().filter(x=>x.date>=t).slice(0,5);
   const when=d=>{ const n=daysBetween(t,d); return n===0?"Today":n===1?"Tomorrow":n<60?`In ${n} days`:`In ${Math.round(n/7)} weeks`; };
@@ -740,7 +740,7 @@ function reqForm(pre, keep){
   if(!keep) reqDraft={kind:"change", files:[], text:pre||""};
   const k=reqDraft.kind;
   openSheet(navBar(navBtn("close","Cancel"),"New Request",navBtn("reqsave","Send",'style="font-weight:600"'))+`<div class="sh-body">
-    <div class="seg" role="group" aria-label="Request type" style="margin-bottom:14px"><button type="button" data-rk="change" aria-pressed="${k==="change"}">Comment or change</button><button type="button" data-rk="pt" aria-pressed="${k==="pt"}">PT update</button></div>
+    <div class="seg" role="group" aria-label="Request type" style="margin-bottom:14px"><button type="button" data-rk="change" aria-pressed="${k==="change"}">Training</button><button type="button" data-rk="pt" aria-pressed="${k==="pt"}">PT update</button><button type="button" data-rk="app" aria-pressed="${k==="app"}">App</button></div>
     <textarea class="ta" id="reqText" placeholder="${k==="pt"?"What your PT changed. You can also just attach the photo or PDF.":"Anything you want adjusted: an exercise, a day, how a run felt, a goal."}" aria-label="Request">${esc(reqDraft.text||"")}</textarea>
     ${assets?`<div style="margin-top:12px"><button class="btn-big sec2" type="button" data-act="attach">Attach Photo or PDF</button></div>`:`<div class="foot">Attachments aren't available in this view.</div>`}
     <div class="att" id="attList">${attHtml()}</div>
@@ -778,7 +778,7 @@ async function saveReq(){
   reqDraft={kind:"change", files:[]};
 }
 function reqSheet(id){ const r=S.requests.find(x=>x.id===id); if(!r) return;
-  openSheet(navBar(navBtn("close","Close"),r.kind==="pt"?"PT Update":"Change Request","")+`<div class="sh-body"><div class="hero">${statusPill(r.status)}</div>
+  openSheet(navBar(navBtn("close","Close"),r.kind==="pt"?"PT Update":r.kind==="app"?"App Change":"Change Request","")+`<div class="sh-body"><div class="hero">${statusPill(r.status)}</div>
     <div class="cap">You sent · ${esc(shortDate(String(r.created).slice(0,10)))}</div><div class="group"><p class="para">${esc(r.text)}</p></div>
     ${(r.attachments||[]).length?`<div class="att">${r.attachments.map(a=>/^image\//.test(a.type)?`<a class="a" href="${esc(FP.blobSrc(a.id))}" target="_blank" rel="noopener"><img src="${esc(FP.blobSrc(a.id))}" alt="${esc(a.name)}"></a>`:`<a class="a" href="${esc(FP.blobSrc(a.id))}" target="_blank" rel="noopener" style="color:var(--tint)">Open PDF<br>${esc(a.name)}</a>`).join("")}</div>`:""}
     <div class="sec"><div class="cap">Response</div><div class="group"><p class="para" style="${r.reply?"":"color:var(--label-2)"}">${esc(r.reply||"Waiting for tonight's review.")}</p></div></div></div>`); }
@@ -1224,6 +1224,6 @@ window.addEventListener("hashchange",()=>{ const h=location.hash.slice(1); if(TA
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.03.2216";</script>
+<script>window.FP_VERSION="2026.11.03.2218";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>

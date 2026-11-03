@@ -1,0 +1,5 @@
+src/export/
+src/pwa/app.html
+src/pwa/shots/
+node_modules/
+.netlify
