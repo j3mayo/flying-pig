@@ -867,6 +867,9 @@ function startWorkout(day){
     exFor(day).forEach(e=>{ const simple=!e.scheme||e.block==="Prep"||e.block==="Finish"; if(simple){ W.exercises.push(...splitSimple(e)); return; }
       const ps=parseScheme(e.scheme); W.exercises.push({id:e.id, name:e.name, block:e.block||"", target:[e.load,e.scheme].filter(Boolean).join(" · "), cue:e.cue||"", unit:ps.unit, simple:false, pt:!!e.pt, rest:e.rest||(e.track?120:90), sets:ps.sets.map(r=>({load:e.load, reps:r, done:false}))}); }); }
   if(W.status==="done") W.status="in_progress";
+  /* Sessions started before the split: break any comma-listed warm-up or cool-down into one checkbox per move. */
+  W.exercises=W.exercises.flatMap(e=>{ if(!e.simple||!/,/.test(e.name)) return [e]; const parts=splitSimple(Object.assign({}, S.loads.find(l=>l.id===e.id)||{}, {id:e.id, name:e.name, block:e.block, pt:e.pt}));
+    const was=!!(e.sets&&e.sets[0]&&e.sets[0].done); parts.forEach(x=>{ x.sets[0].done=was; }); return parts; });
   wResume(); wDel=""; wDiscard=false; wEnd=W.restEnd&&W.restEnd>Date.now()?W.restEnd:0; wNext=W.restNext||"";
   try{ localStorage.setItem("fp-w-open", day); }catch(_){}
   dlg.className="full"; renderWorkout(); if(!dlg.open) dlg.showModal(); try{ sh.focus({preventScroll:true}); }catch(_){}
