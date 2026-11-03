@@ -103,6 +103,7 @@ button.row:active{background:var(--fill)}
 .wk .c.today{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--tint)}
 .wk .l{font-size:11px;color:var(--label-2);min-height:14px}
 .callout{background:var(--card);border-radius:12px;padding:14px 16px;display:grid;gap:6px}
+.callout .h svg{width:16px;height:16px;color:var(--run)}
 .callout .h{display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600;color:var(--label-2);text-transform:uppercase;letter-spacing:.02em}
 .callout p{margin:0;font-size:16px;line-height:1.4}
 .feel{display:grid;gap:14px;padding:14px 16px}
@@ -216,17 +217,17 @@ nav.tabs .in{grid-template-columns:repeat(5,1fr)}
 .pillar .why{font-size:13px;color:var(--label-2);margin-top:10px;line-height:1.4;border-top:.5px solid var(--sep);padding-top:10px}
 .meter{height:5px;border-radius:3px;background:var(--fill);overflow:hidden;margin-top:6px}.meter div{height:100%;border-radius:3px}
 .wtool{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 4px 14px}
-.wtool button{border:0;background:var(--fill);color:var(--tint);border-radius:999px;min-height:34px;padding:0 16px;font-weight:600;font-size:15px;cursor:pointer}
+.wtool button{border:0;background:var(--fill);color:var(--tint);border-radius:999px;min-height:44px;padding:0 16px;font-weight:600;font-size:15px;cursor:pointer}
 .wtool button.on{background:var(--tint);color:var(--on-tint)}
 .paused{display:flex;align-items:center;justify-content:space-between;gap:12px;background:color-mix(in srgb,var(--warn) 14%,var(--card));border-radius:12px;padding:12px 14px;margin-bottom:18px}
-.ex-h .swap{border:0;background:var(--fill);color:var(--tint);border-radius:999px;font-size:13px;font-weight:600;min-height:28px;padding:0 12px;cursor:pointer;flex:none}
+.ex-h .swap{border:0;background:var(--fill);color:var(--tint);border-radius:999px;font-size:15px;font-weight:600;min-height:36px;padding:0 14px;cursor:pointer;flex:none}
 .sg .no{border:0;background:none;font:600 16px var(--font);color:var(--label);padding:0;min-height:36px;cursor:pointer}
 .del{width:44px;height:36px;border-radius:8px;border:0;background:var(--bad);color:#fff;font-size:12px;font-weight:700;cursor:pointer}
 .rest[hidden]{display:none}
 .rest .x{width:36px;padding:0;font-size:20px;line-height:1;color:var(--label-2)}
 .tagpt{display:inline-block;font-size:11px;font-weight:700;color:var(--tint);background:color-mix(in srgb,var(--tint) 16%,transparent);border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:1px;letter-spacing:.02em}
 .sugbtns{display:flex;gap:8px;flex:none}
-.sugbtns button{border:0;border-radius:999px;min-height:32px;padding:0 12px;font-weight:600;font-size:14px;cursor:pointer;background:var(--fill);color:var(--label-2)}
+.sugbtns button{border:0;border-radius:999px;min-height:44px;padding:0 16px;font-weight:600;font-size:14px;cursor:pointer;background:var(--fill);color:var(--label-2)}
 .sugbtns button.yes{background:var(--tint);color:var(--on-tint)}
 .ms-when{font-size:13px;color:var(--label-2);text-align:right;white-space:nowrap;flex:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -1069,8 +1070,8 @@ function trendOf(key, goodUp, t){ const rec=dvals(key,addDays(t,-13),t), base=dv
 function series(key,t,days){ return Object.values(S.daily).filter(d=>d.date>=addDays(t,-(days||90))&&d[key]!=null&&d[key]!==""&&!isNaN(+d[key])).sort((a,b)=>a.date.localeCompare(b.date)).map(d=>({x:d.date,y:+d[key]})); }
 function pillarStatus(list){ const s=list.map(x=>x&&x.st).filter(Boolean); if(!s.length) return null; if(s.includes("watch")) return "watch"; if(s.includes("improving")) return "improving"; return "steady"; }
 const stPill = s => s? `<span class="pill ${s==="improving"?"good":s==="watch"?"warn":"tint"}">${s==="improving"?"Improving":s==="watch"?"Watch":"Steady"}</span>` : '<span class="pill">Building baseline</span>';
-const fmtN=(v,dp)=>v==null?"–":(+v).toFixed(dp||0);
-const dTxt=(x,unit,dp)=>{ if(!x||x.diff==null) return "7-day average"; const a=Math.abs(x.diff).toFixed(dp||0); return +a===0?"Steady":`${x.diff>0?"Up":"Down"} ${a}${unit}`; };
+const fmtN=(v,dp)=>v==null||isNaN(v)?"–":(+v).toFixed(dp||0);
+const dTxt=(x,unit,dp)=>{ if(!x||x.cur==null) return "Syncs from your watch"; if(x.diff==null) return "7-day average"; const a=Math.abs(x.diff).toFixed(dp||0); return +a===0?"Steady":`${x.diff>0?"Up":"Down"} ${a}${unit}`; };
 function liftE1(id){ const l=S.loads.find(x=>x.id===id); if(!l||!l.history) return null; const pts=l.history.map(h=>({x:h.date,y:e1rm(+h.load,+h.reps)})).filter(q=>q.y).sort((a,b)=>a.x.localeCompare(b.x)); return pts.length?{name:l.name, pts, last:pts[pts.length-1].y, first:pts[0].y}:null; }
 function viewHealth(){
   const t=todayISO(), st=settings();
@@ -1085,7 +1086,7 @@ function viewHealth(){
   const chart=(pts,label,color,invert,dp)=>pts.length>=2?lineChart(pts,{label, color, invert, empty:"", fmt:v=>(+v).toFixed(dp||0)}):"";
   const rhrS=series("rhr",t), vo2S=series("vo2",t,180), hrvS=rolling(Object.values(S.daily).filter(d=>d.date>=addDays(t,-90)),"hrv",7), wtS=series("weight",t);
   const heart=card("run",ICON.heart,"Heart & Fitness",pillarStatus([vo2,rhr,epSt]),
-    num("VO2 max",fmtN(vo2.cur,1),"",vo2.cur==null?"From your watch":dTxt(vo2,"",1))+num("Resting HR",fmtN(rhr.cur),"bpm",dTxt(rhr," bpm"))+num("Easy pace",ep.length?fmtPace(pace(easy[easy.length-1])):"–","/mi",`At HR under ${st.easyCap}`)+num("Easy runs",easy.length,"","Logged so far"),
+    num("VO2 max",fmtN(vo2.cur,1),"",dTxt(vo2,"",1))+num("Resting HR",fmtN(rhr.cur),"bpm",dTxt(rhr," bpm"))+num("Easy pace",ep.length?fmtPace(pace(easy[easy.length-1])):"–","/mi",`At HR under ${st.easyCap}`)+num("Easy runs",easy.length,"","Logged so far"),
     chart(vo2S.length>=2?vo2S:rhrS, vo2S.length>=2?"VO2 max, last 6 months":"Resting heart rate, last 90 days", "var(--run)", vo2S.length<2, vo2S.length>=2?1:0),
     "Higher cardiorespiratory fitness is linked to longer life in large cohort studies (Mandsager et al., JAMA Netw Open, 2018). Lower resting HR over time usually means a fitter heart.");
   const rec=card("extra",ICON.rest,"Recovery",pillarStatus([hrv,slp]),
@@ -1097,10 +1098,12 @@ function viewHealth(){
     lifts.length&&lifts[0].pts.length>=2?lineChart(lifts[0].pts,{label:lifts[0].name+" estimated max",color:"var(--lift)",empty:"",fmt:v=>Math.round(v)}):"",
     "Greater muscle strength is linked to lower mortality in a 17-country cohort (Leong et al., Lancet, 2015). Estimated max uses the Epley formula from your best set.");
   const body=card("soc",ICON.body,"Body",pillarStatus([wt,stp]),
-    num("Weight",fmtN(wt.cur,1),"lb",dTxt(wt," lb",1))+num("Steps",stp.cur==null?"–":Math.round(stp.cur).toLocaleString(),"/day",stp.cur==null?"From your watch":dTxt(stp,"",0)),
+    num("Weight",fmtN(wt.cur,1),"lb",dTxt(wt," lb",1))+num("Steps",stp.cur==null?"–":Math.round(stp.cur).toLocaleString(),"/day",dTxt(stp,"",0)),
     chart(wtS,"Weight, last 90 days","var(--warn)",false,1),
     "Daily steps are linked to lower mortality, leveling off around 8,000 to 10,000 a day for adults under 60 (Paluch et al., Lancet Public Health, 2022).");
-  return `<h1 class="large">Health</h1><div class="sub">Long-term trends from your watch and training</div>${heart}${rec}${str}${body}
+  const noWatch=!Object.values(S.daily).some(d=>d.rhr!=null||d.hrv!=null||d.sleep!=null||d.vo2!=null);
+  const banner=noWatch?`<div class="callout" style="margin-top:4px"><div class="h">${ICON.heart} Waiting on your watch</div><p>Resting HR, HRV, sleep, VO2 max and steps arrive with the nightly sync from Health Auto Export. Trends appear after about two weeks.</p></div>`:"";
+  return `<h1 class="large">Health</h1><div class="sub">Long-term trends from your watch and training</div>${banner}${heart}${rec}${str}${body}
   <div class="foot" style="padding-top:14px">Status compares the last 2 weeks with the 6 weeks before. Trends, not a diagnosis.</div>`;
 }
 
