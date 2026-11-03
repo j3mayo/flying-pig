@@ -838,7 +838,7 @@ async function saveFeel(){
 }
 
 /* ---------- workout mode ---------- */
-let wPeek=false, W=null, wLast=null, wTick=null, wEnd=0, wNext="", wInFlight=false, wDirty=false, wInputT=null, wClock=null, wDel="", wDiscard=false;
+let wReset=false, wPeek=false, W=null, wLast=null, wTick=null, wEnd=0, wNext="", wInFlight=false, wDirty=false, wInputT=null, wClock=null, wDel="", wDiscard=false;
 function parseScheme(s){ s=String(s||"").trim(); const m=s.match(/^(\d+)\s*x\s*(.+)$/i);
   if(m){ let r=m[2].trim(); const side=/\/side/i.test(r); r=r.replace(/\/side/i,"").trim(); return {sets:Array.from({length:+m[1]},()=>r), unit:side?"/side":""}; }
   if(/^\d+(\s*\/\s*\d+)+$/.test(s)) return {sets:s.split("/").map(x=>x.trim()), unit:""};
@@ -897,7 +897,7 @@ function renderWorkout(){
   sh.innerHTML = navBar(`<button class="nav-btn" type="button" data-w="close">Close</button>`, `Day ${esc(W.day)} · ${esc(LIFT_NAMES[W.day]||"")}<small><span id="wEl">${elapsed()}</span> · ${c.d}/${c.n} done</small>`, `<button class="nav-btn" type="button" data-w="finish" style="font-weight:600">Finish</button>`)
     + `<div class="wp"><div style="width:${c.n?Math.round(c.d/c.n*100):0}%"></div></div>`
     + `<div class="sh-body">
-      <div class="wtool"><button type="button" data-w="pause" class="${paused?"on":""}">${paused?"Resume":"Pause"}</button><span class="foot" style="padding:0">Tap a set number to delete it</span></div>
+      <div class="wtool"><div style="display:flex;gap:8px"><button type="button" data-w="pause" class="${paused?"on":""}">${paused?"Resume":"Pause"}</button><button type="button" data-w="reset">${wReset?"Tap to confirm":"Reset Timer"}</button></div><span class="foot" style="padding:0;text-align:right">Tap a set number to delete it</span></div>
       ${paused?`<div class="paused"><div><div style="font-weight:600">Workout paused</div><div class="foot" style="padding:2px 0 0">The timer is stopped. Your sets are saved.</div></div><button class="btn-big" type="button" data-w="pause" style="width:auto;padding:0 18px;min-height:40px">Resume</button></div>`:""}
       ${body}
       <button type="button" class="btn-big sec2" data-w="addex" style="margin-bottom:22px">+ Add Exercise</button>
@@ -947,6 +947,8 @@ sh.addEventListener("click", e=>{
     else if(w==="rmex"){ W.exercises.splice(wAltIdx,1); wPeek=false; persistWorkout(); renderWorkout(); toast("Removed from today"); }
     return; }
   if(w!=="discard") wDiscard=false;
+  if(w!=="reset") wReset=false;
+  if(w==="reset"){ if(!wReset){ wReset=true; renderWorkout(); return; } wReset=false; W.startedAt=new Date().toISOString(); W.pausedMs=0; W.pausedAt=null; persistWorkout(); renderWorkout(); toast("Timer reset to 0:00. Your sets are kept."); return; }
   if(w==="close"){ grabNotes(); wPause(); persistWorkout(); endWorkout("Paused and saved. Tap Resume Workout to continue."); return; }
   if(w==="finish"){ finishWorkout(); return; }
   if(w==="discard"){ if(!wDiscard){ wDiscard=true; renderWorkout(); return; } discardWorkout(); return; }
