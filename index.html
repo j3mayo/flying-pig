@@ -537,7 +537,7 @@ function viewToday(){
   if(p&&p.soccer) rows+=`<div class="row"><span class="ico soc">${ICON.soc}</span><div class="main"><div class="t">Soccer</div><div class="s">Hard day</div></div></div>`;
   const ptItems=(S.ptDaily&&S.ptDaily.items)||[];
   if(ptItems.length){ const got=(S.daily[t]&&S.daily[t].pt)||{}, dn=ptItems.filter(x=>(got[x.id]||0)>=(x.target||1)).length;
-    rows+=`<button class="row" type="button" data-act="gopt"><span class="ico extra" style="background:#5856D6">${ICON.heart}</span><div class="main"><div class="t">Evening PT</div><div class="s">${ptItems.length} moves at home · ${dn} of ${ptItems.length} done</div></div>${dn===ptItems.length?'<span class="pill good">Done</span>':""}${CHEV}</button>`; }
+    rows+=`<button class="row" type="button" data-act="gopt"><span class="ico extra" style="background:#5856D6">${ICON.heart}</span><div class="main"><div class="t">PT at home</div><div class="s">Morning, through the day, evening · ${dn} of ${ptItems.length} done</div></div>${dn===ptItems.length?'<span class="pill good">Done</span>':""}${CHEV}</button>`; }
   if(!rows) rows=`<div class="row"><span class="ico rest">${ICON.rest}</span><div class="main"><div class="t">Rest day</div><div class="s">Recovery is training too</div></div></div>`;
   const btn = p&&p.lift ? `<div style="margin-top:12px"><button class="btn-big" type="button" data-act="workout" data-day="${esc(p.lift)}">${ll&&ll.status==="in_progress"?"Resume Workout":ll?"Open Workout":"Start Workout"}</button></div>` : "";
   const strip = wk.map(x=>{ const d=parse(x.date), s=dayStatus(x.date), rr=runsOn(x.date);
@@ -559,8 +559,10 @@ function viewToday(){
 }
 function ptCard(t){ const items=(S.ptDaily&&S.ptDaily.items)||[]; if(!items.length) return ""; const got=(S.daily[t]&&S.daily[t].pt)||{};
   const done=items.filter(x=>(got[x.id]||0)>=(x.target||1)).length;
-  return `<div class="sec" id="eveningPT"><div class="sec-h"><h2>Evening PT</h2><span class="foot" style="padding:0">${done} of ${items.length} done</span></div><div class="cap" style="padding-top:0">At home after your cool-down · from your PT plan</div><div class="group">${items.map(x=>{ const n=got[x.id]||0, tg=x.target||1, full=n>=tg;
-    return `<div class="row"><div class="main"><div class="t">${esc(x.name)}</div><div class="s">${esc(x.dose)} · ${esc(x.freq||"")}</div></div><button type="button" class="ptc${full?" full":""}" data-act="ptinc" data-id="${esc(x.id)}" aria-label="${esc(x.name)}: ${n} of ${tg}">${full?CHECK:(tg>1?`${n}/${tg}`:"")}</button></div>`; }).join("")}</div><div class="foot">Tap after each round. Tap a finished one to reset it.</div></div>`; }
+  const row=x=>{ const n=got[x.id]||0, tg=x.target||1, full=n>=tg; return `<div class="row"><div class="main"><div class="t">${esc(x.name)}</div><div class="s">${esc(x.dose)} · ${esc(x.freq||"")}</div></div><button type="button" class="ptc${full?" full":""}" data-act="ptinc" data-id="${esc(x.id)}" aria-label="${esc(x.name)}: ${n} of ${tg}">${full?CHECK:(tg>1?`${n}/${tg}`:"")}</button></div>`; };
+  const SLOTS=[["am","Morning"],["day","Through the day"],["pm","Evening · after your cool-down"]];
+  const groups=SLOTS.map(([k,l])=>{ const xs=items.filter(x=>(x.slot||"pm")===k); return xs.length?`<div class="cap" style="padding-top:12px">${l}</div><div class="group">${xs.map(row).join("")}</div>`:""; }).join("");
+  return `<div class="sec" id="eveningPT"><div class="sec-h"><h2>PT Today</h2><span class="foot" style="padding:0">${done} of ${items.length} done</span></div>${groups}<div class="foot">At home, from your PT plan. Tap after each round; tap a finished one to reset it.</div></div>`; }
 async function ptInc(id){ const t=todayISO(), it=((S.ptDaily&&S.ptDaily.items)||[]).find(x=>x.id===id); if(!it) return; const cur=Object.assign({}, S.daily[t]||{}), pt=Object.assign({}, cur.pt||{}); const tg=it.target||1;
   pt[id]=(pt[id]||0)>=tg?0:(pt[id]||0)+1; try{ await db.collection("daily").doc(t).set(Object.assign(cur,{date:t, pt})); }catch(err){ failed(err); } }
 function shortRun(r){ return (r.label||("Easy "+r.miles+" mi")).replace(/\s*\(long run\)/i," long run").replace(/\s*\(.*?\)\s*/g," ").trim(); }
@@ -1222,6 +1224,6 @@ window.addEventListener("hashchange",()=>{ const h=location.hash.slice(1); if(TA
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.03.2213";</script>
+<script>window.FP_VERSION="2026.11.03.2216";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>
