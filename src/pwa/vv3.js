@@ -37,9 +37,18 @@ for(const scheme of ['light','dark']){
  await pg.tap('[data-act="ptex"][data-id="p1"]');await W(200);await pg.fill('#peLoad','40s');await pg.tap('[data-act="ptexsave"]');await W(300);
  ok(P+'PT session exercise edited',await pg.evaluate(()=>__store['loads/p1'].load==='40s'));
  await pg.tap('[data-act="ptex"][data-id="p2"]');await W(200);await pg.tap('[data-act="ptexdel"]');await W(300);
+ ok(P+'one tap does not remove a PT exercise',await pg.evaluate(()=>!!__store['loads/p2'])&&(await pg.textContent('[data-act="ptexdel"]'))==='Tap Again to Remove');
+ await pg.tap('[data-act="ptexdel"]');await W(300);
  ok(P+'PT session exercise removed',await pg.evaluate(()=>!__store['loads/p2']));
  await pg.tap('[data-act="ptex"][data-id="new"]');await W(200);await pg.fill('#peName','Prone Y');await pg.fill('#peScheme','3 x 12');await pg.tap('[data-act="ptexsave"]');await W(300);
  ok(P+'PT session exercise added',await pg.evaluate(()=>Object.values(__store).some(v=>v&&v.day==='P'&&v.name==='Prone Y')));
+ ok(P+'new PT exercise gets its own block',await pg.evaluate(()=>{const v=Object.values(__store).find(v=>v&&v.day==='P'&&v.name==='Prone Y');return v&&v.block[0]!=='A';}));
+ await pg.screenshot({path:out+'-'+scheme+'-ptedit.png',fullPage:true});
+ const ptHas=()=>pg.evaluate(()=>__store['settings/ptDaily'].items.some(x=>x.name==='Neck rotation'));
+ await pg.evaluate(()=>{const d=__store['settings/ptDaily'];d.items.unshift({id:'zz-live',slot:'pm',name:'Live insert',dose:'1',target:1});});
+ const nk=await pg.$eval('[data-act="ptitem"]:has-text("Neck rotation")',e=>e.dataset.i);await pg.tap(`[data-act="ptitem"][data-i="${nk}"]`);await W(200);
+ await pg.tap('[data-act="ptitemdel"]');await W(250);ok(P+'one tap does not remove a PT item',await ptHas());
+ await pg.tap('[data-act="ptitemdel"]');await W(300);ok(P+'PT item removed by id, others kept',!(await ptHas())&&await pg.evaluate(()=>__store['settings/ptDaily'].items.some(x=>x.id==='doorway-am')));
  await pg.tap('.sh [data-act="close"]');await W(200);
  // Health
  await pg.tap('.tab[data-tab="health"]');await W(300);
