@@ -66,7 +66,7 @@ rep('attachments:reqDraft.files.map(f=>({id:f.id, name:f.name, type:f.type}))',
 rep('''<div class="t">Add a check-in for another day</div></div>${CHEV}</button></div></div>`;''',
     '''<div class="t">Add a check-in for another day</div></div>${CHEV}</button></div></div>
   <div class="sec"><div class="group"><button class="row" type="button" data-act="signout"><div class="main"><div class="t" style="color:var(--bad)">Sign Out</div></div></button></div><div class="foot" style="text-align:center;padding-top:10px">Healthspan · version ${esc(window.FP_VERSION||"")}</div></div>`;''')
-rep('liftsheet:()=>liftSheet(a.dataset.day),', 'signout:()=>FP.signOut(), liftsheet:()=>liftSheet(a.dataset.day),')
+rep('liftsheet:()=>liftSheet(a.dataset.day, a.dataset.view==="1"),', 'signout:()=>FP.signOut(), liftsheet:()=>liftSheet(a.dataset.day, a.dataset.view==="1"),')
 
 # boot
 rep('''  const c=window.claude; db = c&&c.use ? await c.use("db") : null; if(c&&c.use) c.use("assets").then(a=>{ assets=a; }).catch(()=>{});

@@ -8,6 +8,7 @@ const iso=d=>d.toISOString().slice(0,10);const T=new Date();
 for(let i=0;i<60;i++){const d=new Date(T);d.setDate(d.getDate()-i);const k=iso(d);seed['daily/'+k]=Object.assign({},seed['daily/'+k]||{},{date:k,rhr:52+Math.round(i/10),hrv:68-Math.round(i/8),sleep:+(7.4-(i%3)*.2).toFixed(1),weight:+(182+i*.03).toFixed(1),steps:9000+i*10,vo2:+(46-i*.03).toFixed(1)});}
 seed['settings/ptDaily']={items:[{id:'doorway-am',slot:'am',name:'Doorway stretch',dose:'5 x 30 s',target:1,freq:'Round 1 of 2'}]};
 [['p1','Shrug','35s','3 x 10','A1'],['p2','Banded wall slide','Band','3 x 12','A2']].forEach(([id,n,l,sc,bl],i)=>seed['loads/'+id]={day:'P',order:i+1,block:bl,name:n,load:l,scheme:sc,pt:true,rest:60});
+if(seed['loads/b3'])seed['loads/b3'].history=[...(seed['loads/b3'].history||[]),{date:'2026-10-01',load:150,reps:10,scheme:'150x10'}];
 if(seed['loads/b1'])seed['loads/b1'].history=[...(seed['loads/b1'].history||[]),{date:'2026-10-01',load:150,reps:6,scheme:'150x6'}];
 seed['settings/goalSuggestions']={items:[{id:'g1',title:'Average 7.5 h of sleep',detail:'7-day average',why:'Sleep has been under 7 h on 3 nights this week.'},{id:'g2',title:'Check in 5 days a week',detail:'',why:'Check-ins let the plan adjust to how you feel.'}]};
 const html=fs.readFileSync(path.join(DIR,'app.html'),'utf8');
@@ -47,6 +48,14 @@ for(const scheme of ['light','dark']){
  ok(P+'run gets Log Run, lift and PT session get Start',acts.some(a=>a.startsWith('logrun::Log Run'))&&acts.some(a=>/^workout:C:(Start|Resume)/.test(a))&&acts.some(a=>/^workout:P:(Start|Resume)/.test(a)),acts.join(' | '));
  const order=await pg.$$eval('.tlc .k',x=>x.map(e=>e.textContent.toLowerCase()));
  ok(P+'Day C comes before the run',order.findIndex(k=>k.includes('lift'))<order.findIndex(k=>k.includes('run')),order.join(','));
+ await pg.evaluate(t=>{const row={date:t,day:'C',status:'done',exercises:[{id:'c1',name:'Speed Smith squat',sets:[{load:'95',reps:'3',done:true}]}]};__store['liftlog/'+t]=row;__rt({eventType:'INSERT',new:{coll:'liftlog',id:t,data:row}});},tday);await W(300);
+ await pg.tap('.tlc [data-act="workout"][data-day="P"]');await W(300);
+ ok(P+'a second session never replaces one already logged today',await pg.evaluate(t=>__store['liftlog/'+t].day==='C',tday)&&(await pg.textContent('.toast')).includes('already logged')&&!(await pg.evaluate(()=>document.getElementById('dlg').open)));
+ await pg.evaluate(t=>{delete __store['liftlog/'+t];__rt({eventType:'DELETE',old:{coll:'liftlog',id:t}});},tday);await W(300);
+ const nextWk=await pg.$eval('.wkb[aria-label="Next week"]',e=>e.dataset.sday);await pg.tap('.wkb[aria-label="Next week"]');await W(250);
+ ok(P+'week arrows move a week',(await pg.getAttribute('.wd.on','data-sday'))===nextWk&&(await pg.$$('.wd')).length===7);
+ const vw=await pg.$('.tlc [data-act="liftsheet"][data-view="1"]');if(vw){await vw.tap();await W(250);ok(P+'viewing a future lift has no Start button',!(await pg.$('.sh [data-act="workout"]')));await pg.tap('.sh [data-act="close"]');await W(200);}
+ await pg.tap('.lnk.back');await W(250);
  await pg.tap('.tlc [data-act="logrun"]');await W(250);ok(P+'Log Run opens the run form for that day',(await pg.inputValue('#rDate'))===tday&&(await pg.inputValue('#rMi'))==='3');await pg.tap('.sh [data-act="close"]');await W(200);
  // Home PT slot sheet and check-in
  await pg.tap('[data-act="ptslot"][data-slot="am"]');await W(250);
@@ -171,7 +180,7 @@ for(const scheme of ['light','dark']){
  else ok(P+'tapping Previous fills the set',false,'no previous values shown');
  ok(P+'superset caption stays on one line',await pg.$$eval('.ss-cap',x=>x.length>0&&x.every(e=>e.getBoundingClientRect().height<32)));
  // personal best
- const pe0=await pg.evaluate(()=>+document.querySelector('[data-w="plates"]').dataset.e);
+ const pe0=await pg.evaluate(()=>+[...document.querySelectorAll('[data-w="plates"]')].find(b=>!b.closest('.ex').textContent.includes('instead of')).dataset.e);
  const free=await pg.evaluate(e=>{const b=[...document.querySelectorAll(`[data-w="tick"][data-e="${e}"]`)].find(x=>x.getAttribute('aria-pressed')!=='true');return b?+b.dataset.s:-1;},pe0);
  await pg.fill(`.sg input[data-f="load"][data-e="${pe0}"][data-s="${free}"]`,'500');await pg.fill(`.sg input[data-f="reps"][data-e="${pe0}"][data-s="${free}"]`,'5');await W(100);
  await pg.tap(`[data-w="tick"][data-e="${pe0}"][data-s="${free}"]`);await W(250);
