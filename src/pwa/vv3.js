@@ -6,6 +6,8 @@ const seed={};for(const c of fs.readdirSync(EXP))for(const f of fs.readdirSync(p
 const iso=d=>d.toISOString().slice(0,10);const T=new Date();
 // 60 days of watch data with clear trends so pillar statuses are testable
 for(let i=0;i<60;i++){const d=new Date(T);d.setDate(d.getDate()-i);const k=iso(d);seed['daily/'+k]=Object.assign({},seed['daily/'+k]||{},{date:k,rhr:52+Math.round(i/10),hrv:68-Math.round(i/8),sleep:+(7.4-(i%3)*.2).toFixed(1),weight:+(182+i*.03).toFixed(1),steps:9000+i*10,vo2:+(46-i*.03).toFixed(1)});}
+seed['settings/ptDaily']={items:[{id:'doorway-am',slot:'am',name:'Doorway stretch',dose:'5 x 30 s',target:1,freq:'Round 1 of 2'}]};
+[['p1','Shrug','35s','3 x 10','A1'],['p2','Banded wall slide','Band','3 x 12','A2']].forEach(([id,n,l,sc,bl],i)=>seed['loads/'+id]={day:'P',order:i+1,block:bl,name:n,load:l,scheme:sc,pt:true,rest:60});
 seed['settings/goalSuggestions']={items:[{id:'g1',title:'Average 7.5 h of sleep',detail:'7-day average',why:'Sleep has been under 7 h on 3 nights this week.'},{id:'g2',title:'Check in 5 days a week',detail:'',why:'Check-ins let the plan adjust to how you feel.'}]};
 const html=fs.readFileSync(path.join(DIR,'app.html'),'utf8');
 const src=fs.readFileSync(path.join(DIR,'vv2.js'),'utf8');const mockSb=eval(src.match(/const mockSb=(`[\s\S]*?`);/)[1].replace('${JSON.stringify(seed)}','__SEED__')).replace('__SEED__',JSON.stringify(seed));
@@ -28,6 +30,17 @@ for(const scheme of ['light','dark']){
  const days=await pg.$$('#view .day');ok(P+'Coming Up shows day cards with date blocks',days.length>=5&&!!(await pg.$('#view .day .dt .n')),String(days.length));
  await pg.screenshot({path:out+'-'+scheme+'-today.png',fullPage:true});
  await pg.tap('#view .day >> nth=0');await W(250);ok(P+'tapping a day opens its detail',(await pg.textContent('.sh-nav .ttl')).length>5&&(await pg.$$('.sh .group')).length>=1);await pg.tap('.sh [data-act="close"]');await W(200);
+ // PT editor
+ await pg.tap('#view [data-act="ptedit"]');await W(250);ok(P+'PT editor opens',(await pg.textContent('.sh-nav .ttl'))==='Edit PT');
+ await pg.tap('[data-act="ptitem"][data-i="new"]');await W(200);await pg.fill('#piName','Neck rotation');await pg.fill('#piDose','2 x 10');await pg.selectOption('#piSlot','am');await pg.tap('[data-act="ptitemsave"]');await W(300);
+ ok(P+'daily PT item added',await pg.evaluate(()=>__store['settings/ptDaily'].items.some(x=>x.name==='Neck rotation'&&x.slot==='am')));
+ await pg.tap('[data-act="ptex"][data-id="p1"]');await W(200);await pg.fill('#peLoad','40s');await pg.tap('[data-act="ptexsave"]');await W(300);
+ ok(P+'PT session exercise edited',await pg.evaluate(()=>__store['loads/p1'].load==='40s'));
+ await pg.tap('[data-act="ptex"][data-id="p2"]');await W(200);await pg.tap('[data-act="ptexdel"]');await W(300);
+ ok(P+'PT session exercise removed',await pg.evaluate(()=>!__store['loads/p2']));
+ await pg.tap('[data-act="ptex"][data-id="new"]');await W(200);await pg.fill('#peName','Prone Y');await pg.fill('#peScheme','3 x 12');await pg.tap('[data-act="ptexsave"]');await W(300);
+ ok(P+'PT session exercise added',await pg.evaluate(()=>Object.values(__store).some(v=>v&&v.day==='P'&&v.name==='Prone Y')));
+ await pg.tap('.sh [data-act="close"]');await W(200);
  // Health
  await pg.tap('.tab[data-tab="health"]');await W(300);
  const pil=await pg.$$eval('.pillar h3',x=>x.map(e=>e.textContent));ok(P+'Health shows the four pillars',pil.join('|')==='Heart & Fitness|Recovery|Strength|Body',pil.join('|'));
