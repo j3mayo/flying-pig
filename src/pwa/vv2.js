@@ -37,7 +37,7 @@ async function route(pg){await pg.route('**/*',r=>{const u=r.request().url();
  await pg.tap('#auUp');await pg.fill('#auE','owner@example.com');await pg.fill('#auP','short');await pg.tap('#auIn');await pg.waitForTimeout(150);
  ok('auth: short password rejected',(await pg.textContent('#auM')).includes('8 characters'));
  await pg.fill('#auP','correct-horse-1');await pg.tap('#auIn');await pg.waitForTimeout(900);
- ok('auth: create account then signed in, plan loads',!(await pg.$('.auth'))&&(await pg.textContent('#view')).includes('Today'));
+ ok('auth: create account then signed in, plan loads',!(await pg.$('.auth'))&&!!(await pg.$('#view .dt1')));
  await pg.evaluate(()=>{localStorage.removeItem('mock-sess');});await pg.reload();await pg.waitForTimeout(500);
  await pg.tap('#auUp');await pg.fill('#auE','someone@else.com');await pg.fill('#auP','another-pass-1');await pg.tap('#auIn');await pg.waitForTimeout(200);
  ok('auth: second account blocked',(await pg.textContent('#auM')).includes('already has its owner'));
@@ -50,7 +50,7 @@ for(const scheme of ['light','dark']){
  await pg.addInitScript(()=>{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.setItem('mock-sess',JSON.stringify({user:{id:'u1'}}));}});
  await pg.goto('https://app.test/');await pg.waitForTimeout(700);
  const st=await pg.evaluate(()=>({plan:Object.keys(__store).filter(k=>k.startsWith('plan/')).length}));
- ok(scheme+': migrated plan visible (65 days in store)',st.plan===65&&(await pg.$$('#view .row, #view .day')).length>2,String(st.plan));
+ ok(scheme+': migrated plan visible (65 days in store)',st.plan===65&&(await pg.$$('#view .tli')).length>=1,String(st.plan));
  ok(scheme+': home-screen tags present',await pg.evaluate(()=>!!document.querySelector('link[rel=apple-touch-icon]')&&document.querySelector('meta[name=apple-mobile-web-app-capable]').content==='yes'));
  await pg.tap('#logBtn');await pg.waitForTimeout(200);
  ok(scheme+': sheet opens with no button focused',await pg.evaluate(()=>document.activeElement&&document.activeElement.id)==='sh');
@@ -75,10 +75,10 @@ for(const scheme of ['light','dark']){
  await pg.evaluate(()=>__rt({eventType:'INSERT',new:{coll:'updates',id:'2026-11-03-9',data:{date:'2026-11-03',title:'Nightly test update',detail:'Pushed live'}}}));await pg.waitForTimeout(300);
  ok(scheme+': nightly change appears live without reopening',(await pg.textContent('#view')).includes('Nightly test update'));
  await pg.screenshot({path:out+'-'+scheme+'-you.png',fullPage:true});
- await pg.tap('.tab[data-tab="today"]');await pg.waitForTimeout(200);await pg.tap('[data-act="workout"]');await pg.waitForTimeout(300);
+ await pg.tap('.tab[data-tab="plan"]');await pg.waitForTimeout(200);await pg.tap('[data-pseg="lifts"]');await pg.waitForTimeout(150);await pg.tap('[data-lday="A"]');await pg.waitForTimeout(150);await pg.tap('[data-act="workout"][data-day="A"]');await pg.waitForTimeout(300);
  await pg.tap('[data-w="tick"] >> nth=1');await pg.waitForTimeout(150);await pg.tap('[data-w="finish"] >> nth=0');await pg.waitForTimeout(500);
  ok(scheme+': workout logged set by set and saved',await pg.evaluate(()=>Object.values(__store).some(v=>v&&v.status==='done'&&v.exercises)));
- for(const t of ['today','runs','lifts']){await pg.tap(`.tab[data-tab="${t}"]`);await pg.waitForTimeout(200);await pg.screenshot({path:out+'-'+scheme+'-'+t+'.png'});}
+ for(const t of ['today','plan']){await pg.tap(`.tab[data-tab="${t}"]`);await pg.waitForTimeout(200);await pg.screenshot({path:out+'-'+scheme+'-'+t+'.png'});}
  ok(scheme+': no sideways scroll',!(await pg.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth)));
  // offline relaunch uses cache
  await pg.evaluate(()=>{window.supabase=undefined;});

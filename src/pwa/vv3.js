@@ -25,14 +25,50 @@ for(const scheme of ['light','dark']){
  await pg.addInitScript(()=>{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.clear();localStorage.setItem('mock-sess',JSON.stringify({user:{id:'u1'}}));}});
  await pg.goto('https://app.test/');await W(700);const P=scheme+': ';
  ok(P+'renamed to Healthspan',(await pg.title())==='Healthspan'&&await pg.evaluate(()=>document.querySelector('meta[name=apple-mobile-web-app-title]').content)==='Healthspan');
- ok(P+'five tabs including Health',(await pg.$$('.tab')).length===5&&!!(await pg.$('.tab[data-tab="health"]')));
- // Coming Up
- const days=await pg.$$('#view .day');ok(P+'Coming Up shows day cards with date blocks',days.length>=5&&!!(await pg.$('#view .day .dt .n')),String(days.length));
+ ok(P+'four tabs: Today, Plan, Health, You',(await pg.$$eval('.tab',x=>x.map(e=>e.dataset.tab).join(',')))==='today,plan,health,you');
+ // Today: timeline with a button per session type
  await pg.screenshot({path:out+'-'+scheme+'-today.png',fullPage:true});
+ ok(P+'Today shows race countdown and date',/Race in \d+ days/i.test(await pg.textContent('.tk'))&&/^\w+day, \w{3} \d+$/.test(await pg.textContent('.dt1')),await pg.textContent('.dt1'));
+ ok(P+'three rings: miles, lifts, PT',(await pg.$$eval('.rt span',x=>x.map(e=>e.textContent.split(' ')[0]).join(',')))==='Miles,Lifts,PT');
+ ok(P+'timeline lists the day',(await pg.$$('.tl .tli')).length>=1);
+ ok(P+'session buttons are 44 pt targets',await pg.$$eval('.tlc .go, .ckin',x=>x.length>0&&x.every(e=>e.getBoundingClientRect().height>=44)));
+ const tday=await pg.evaluate(()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');});
+ // Pick a planned day with a run and a lift to check each type gets its own button
+ const wds=await pg.$$eval('.wd',x=>x.map(e=>e.dataset.sday));
+ const fut=wds.find(d=>d>tday);
+ if(fut){await pg.tap(`.wd[data-sday="${fut}"]`);await W(250);
+  ok(P+'tapping a day shows that day',(await pg.getAttribute(`.wd[data-sday="${fut}"]`,'aria-pressed'))==='true'&&!!(await pg.$('.lnk.back')));
+  ok(P+'future sessions offer View, not Start',!(await pg.$('.tlc [data-act="workout"]'))&&!(await pg.$('.tlc [data-act="logrun"]')));
+  await pg.tap('.lnk.back');await W(200);}
+ ok(P+'back to today',!(await pg.$('.lnk.back')));
+ await pg.evaluate(t=>{__store['plan/'+t]=Object.assign({},__store['plan/'+t]||{},{date:t,run:{miles:3,label:'Easy 3 mi'},lift:'C',extra:'PT: shrug',soccer:false});__rt({eventType:'UPDATE',new:{coll:'plan',id:t,data:__store['plan/'+t]}});},tday);await W(300);
+ const acts=await pg.$$eval('.tlc .go',x=>x.map(e=>e.dataset.act+':'+(e.dataset.day||'')+':'+e.textContent));
+ ok(P+'run gets Log Run, lift and PT session get Start',acts.some(a=>a.startsWith('logrun::Log Run'))&&acts.some(a=>/^workout:C:(Start|Resume)/.test(a))&&acts.some(a=>/^workout:P:(Start|Resume)/.test(a)),acts.join(' | '));
+ const order=await pg.$$eval('.tlc .k',x=>x.map(e=>e.textContent.toLowerCase()));
+ ok(P+'Day C comes before the run',order.findIndex(k=>k.includes('lift'))<order.findIndex(k=>k.includes('run')),order.join(','));
+ await pg.tap('.tlc [data-act="logrun"]');await W(250);ok(P+'Log Run opens the run form for that day',(await pg.inputValue('#rDate'))===tday&&(await pg.inputValue('#rMi'))==='3');await pg.tap('.sh [data-act="close"]');await W(200);
+ // Home PT slot sheet and check-in
+ await pg.tap('[data-act="ptslot"][data-slot="am"]');await W(250);
+ ok(P+'home PT opens a checklist',(await pg.textContent('.sh-nav .ttl')).startsWith('Morning PT'));
+ await pg.tap('.sh [data-act="ptinc"] >> nth=0');await W(400);
+ ok(P+'checking an item updates the sheet',(await pg.textContent('.sh-nav .ttl small')).startsWith('1 of'));
+ await pg.tap('.sh [data-act="close"]');await W(200);
+ ok(P+'PT ring counts it',(await pg.textContent('.rt >> nth=2')).startsWith('1'));
+ const hadDot=!!(await pg.$('.ckin i'));await pg.evaluate(t=>{const d=__store['daily/'+t];if(d){delete d.energy;}},tday);
+ await pg.tap('.ckin');await W(250);for(const [k,vv] of [['energy',4],['soreness',2],['motivation',4]]) await pg.tap(`.sh [data-feel="${k}"][data-v="${vv}"]`);
+ await pg.tap('.sh-nav [data-act="feelsave"]');await W(400);
+ ok(P+'check-in saves and the dot goes away',await pg.evaluate(t=>__store['daily/'+t].energy===4,tday)&&!(await pg.$('.ckin i'))&&(await pg.textContent('.ckin')).includes('Checked in'));
+ // Plan: schedule, runs, lifts
+ await pg.tap('.tab[data-tab="plan"]');await W(250);
+ const days=await pg.$$('#view .day');ok(P+'Plan schedule shows day cards with date blocks',days.length>=5&&!!(await pg.$('#view .day .dt .n')),String(days.length));
  await pg.tap('#view .day >> nth=0');await W(250);ok(P+'tapping a day opens its detail',(await pg.textContent('.sh-nav .ttl')).length>5&&(await pg.$$('.sh .group')).length>=1);await pg.tap('.sh [data-act="close"]');await W(200);
- // PT editor
- ok(P+'Edit link is a 44 pt target',await pg.$eval('#view [data-act="ptedit"]',e=>e.getBoundingClientRect().height>=44));
- await pg.tap('#view [data-act="ptedit"]');await W(250);ok(P+'PT editor opens',(await pg.textContent('.sh-nav .ttl'))==='Edit PT');
+ await pg.tap('[data-pseg="runs"]');await W(200);ok(P+'Plan shows runs',(await pg.textContent('#view')).includes('Easy pace'));
+ await pg.tap('[data-pseg="lifts"]');await W(200);ok(P+'Plan shows lifts',!!(await pg.$('[data-lday="A"]')));
+ await pg.evaluate(()=>{location.hash='runs';});await W(250);ok(P+'old #runs link opens Plan > Runs',(await pg.getAttribute('[data-pseg="runs"]','aria-pressed'))==='true');
+ await pg.tap('.tab[data-tab="today"]');await W(250);
+ // PT editor (from the home PT sheet)
+ const openPT=async()=>{await pg.tap('[data-act="ptslot"] >> nth=0');await W(250);await pg.tap('.sh-nav [data-act="ptedit"]');await W(250);};
+ await openPT();ok(P+'PT editor opens',(await pg.textContent('.sh-nav .ttl'))==='Edit PT');
  await pg.tap('[data-act="ptitem"][data-i="new"]');await W(200);await pg.fill('#piName','Neck rotation');await pg.fill('#piDose','2 x 10');await pg.selectOption('#piSlot','am');await pg.tap('[data-act="ptitemsave"]');await W(300);
  ok(P+'daily PT item added',await pg.evaluate(()=>__store['settings/ptDaily'].items.some(x=>x.name==='Neck rotation'&&x.slot==='am')));
  await pg.tap('[data-act="ptex"][data-id="p1"]');await W(200);await pg.fill('#peLoad','40s');await pg.tap('[data-act="ptexsave"]');await W(300);
@@ -45,7 +81,7 @@ for(const scheme of ['light','dark']){
  ok(P+'PT session exercise added',await pg.evaluate(()=>Object.values(__store).some(v=>v&&v.day==='P'&&v.name==='Prone Y')));
  ok(P+'new PT exercise gets its own block',await pg.evaluate(()=>{const v=Object.values(__store).find(v=>v&&v.day==='P'&&v.name==='Prone Y');return v&&v.block[0]!=='A';}));
  await pg.screenshot({path:out+'-'+scheme+'-ptedit.png',fullPage:true});
- await pg.tap('[data-act="ptex"][data-id="p1"]');await W(200);await pg.fill('#peLoad','99s');await W(600);await pg.keyboard.press('Escape');await W(250);await pg.tap('#view [data-act="ptedit"]');await W(250);
+ await pg.tap('[data-act="ptex"][data-id="p1"]');await W(200);await pg.fill('#peLoad','99s');await W(600);await pg.keyboard.press('Escape');await W(250);await openPT();
  const pyId=await pg.evaluate(()=>Object.entries(__store).find(([k,v])=>v&&v.day==='P'&&v.name==='Prone Y')[0].split('/')[1]);
  await pg.tap(`[data-act="ptex"][data-id="${pyId}"]`);await W(250);ok(P+'unsaved edits stay with their own exercise',(await pg.inputValue('#peLoad'))!=='99s'&&(await pg.inputValue('#peName'))==='Prone Y');
  ok(P+'new PT exercise id is never reused',/^p-/.test(pyId),pyId);await pg.tap('.sh [data-act="ptedit"]');await W(200);
@@ -79,14 +115,14 @@ for(const scheme of ['light','dark']){
  await pg.tap('.sh [data-act="close"]');await W(200);await pg.tap('.sec-h [data-act="goal"][data-i="new"]');await W(200);
  ok(P+'Cancel clears the draft',(await pg.inputValue('#gT'))==='');await pg.tap('.sh [data-act="close"]');await W(200);
  // Lifts: alternatives as a request
- await pg.tap('.tab[data-tab="lifts"]');await W(200);await pg.tap('[data-lday="A"]');await W(150);await pg.tap('[data-act="exinfo"][data-id="a1"]');await W(250);
+ await pg.tap('.tab[data-tab="plan"]');await W(200);await pg.tap('[data-pseg="lifts"]');await W(150);await pg.tap('[data-lday="A"]');await W(150);await pg.tap('[data-act="exinfo"][data-id="a1"]');await W(250);
  const alts=await pg.$$eval('[data-act="altreq"]',x=>x.map(e=>e.textContent));
  ok(P+'Smith bench offers equivalent swaps with scaled loads',alts.some(t=>t.includes('Flat DB bench')&&t.includes('55s'))&&alts.some(t=>t.includes('Push-up')&&t.includes('4 x 12')),alts.slice(0,3).join(' | '));
  const before=await pg.evaluate(()=>Object.keys(__store).filter(k=>k.startsWith('requests/')).length);
  await pg.tap('[data-act="altreq"] >> nth=0');await W(300);
  ok(P+'tapping a swap sends a request',await pg.evaluate(n=>Object.keys(__store).filter(k=>k.startsWith('requests/')).length===n+1,before));
  // Workout
- await pg.tap('.tab[data-tab="lifts"]');await W(150);await pg.tap('[data-lday="B"]');await W(150);await pg.tap('[data-act="workout"][data-day="B"]');await W(400);
+ await pg.tap('.tab[data-tab="plan"]');await W(150);await pg.tap('[data-pseg="lifts"]');await W(150);await pg.tap('[data-lday="B"]');await W(150);await pg.tap('[data-act="workout"][data-day="B"]');await W(400);
  ok(P+'no -15 / +15 / Skip buttons',!(await pg.$('[data-w="m15"]'))&&!(await pg.$('[data-w="p15"]'))&&!(await pg.$('button:text-is("Skip")')));
  const names=await pg.$$eval('.sets.simple div[style*="font-weight:600"]',x=>x.map(e=>e.textContent.replace('PT','').trim()));
  ok(P+'cool-down split into separate checkboxes',names.includes('Couch stretch')&&names.includes('Thoracic extension'),names.join(','));
@@ -124,10 +160,10 @@ for(const scheme of ['light','dark']){
  // close pauses
  await pg.tap('[data-w="close"]');await W(300);ok(P+'closing pauses the workout',await pg.evaluate(()=>!!__store['liftlog/'+new Date().toISOString().slice(0,10)]||Object.values(__store).some(v=>v&&v.status==='in_progress'&&v.pausedAt)));
  // discard
- await pg.tap('.tab[data-tab="lifts"]');await W(150);await pg.tap('[data-lday="B"]');await W(100);await pg.tap('[data-act="workout"][data-day="B"]');await W(400);
+ await pg.tap('.tab[data-tab="plan"]');await W(150);await pg.tap('[data-pseg="lifts"]');await W(150);await pg.tap('[data-lday="B"]');await W(100);await pg.tap('[data-act="workout"][data-day="B"]');await W(400);
  await pg.tap('[data-w="discard"]');await W(150);ok(P+'discard asks for a second tap',(await pg.textContent('[data-w="discard"]')).includes('Tap again'));
  await pg.tap('[data-w="discard"]');await W(400);ok(P+'discard removes the session',await pg.evaluate(()=>!Object.values(__store).some(v=>v&&v.status==='in_progress'&&v.exercises))&&!(await pg.evaluate(()=>document.getElementById('dlg').open)));
- for(const t of ['today','runs','lifts','health','you']){await pg.tap(`.tab[data-tab="${t}"]`);await W(150);if(await pg.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth))ok(P+t+' no sideways scroll',false);}
+ for(const t of ['today','plan','health','you']){await pg.tap(`.tab[data-tab="${t}"]`);await W(150);if(await pg.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth))ok(P+t+' no sideways scroll',false);}
  ok(P+'no sideways scroll on any tab',true);
  ok(P+'no script errors',errs.length===0,errs.join('|'));await ctx.close();}
 ok('no em dashes',!html.includes('\u2014'));
