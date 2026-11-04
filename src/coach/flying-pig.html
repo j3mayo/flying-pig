@@ -417,6 +417,11 @@ function rolling(arr,key,n){ const pts=arr.filter(d=>d[key]!=null&&d[key]!=="").
 /* ---------- Today: rings, week strip, the day as a timeline, check-in ---------- */
 let selDay = null; /* null means today */
 const PT_SLOTS = {am:"Morning", day:"Through the day", pm:"Evening"};
+/* Run warm-up: about 5 minutes of moving warm-ups, no long static holds before running. Time trial adds easy running and strides. */
+const WARMUP = [["walk","Brisk walk","2 min"],["swingf","Leg swings, front to back","10 per leg"],["swings","Leg swings, side to side","10 per leg"],["lunge","Walking lunges","5 per leg"],["knees","High knees or skips","20 yd"],["calf","Calf raises","10"],["slow","Run the first half mile very easy","Then settle into easy pace"]];
+const WARMUP_TT = [["jog","Easy running","10 to 15 min"],["drills","Leg swings, lunges, high knees","1 round"],["strides","Strides, quick but relaxed","4 × 20 s, walk back"]];
+const warmList = p => /time trial/i.test((p&&p.run&&p.run.label)||"") ? WARMUP_TT : WARMUP;
+function warmState(d){ const p=S.plan[d]||{}, list=warmList(p), got=(S.daily[d]&&S.daily[d].warm)||{}; const n=list.filter(([id])=>got[id]).length; return {list, got, n, all:n===list.length}; }
 function ptSlot(d, slot){ const items=((S.ptDaily&&S.ptDaily.items)||[]).filter(x=>(x.slot||"pm")===slot), got=(S.daily[d]&&S.daily[d].pt)||{};
   const done=items.filter(x=>(got[x.id]||0)>=(x.target||1)).length; return {items, done, all:items.length>0&&done===items.length}; }
 function ptToday(d){ const items=(S.ptDaily&&S.ptDaily.items)||[], got=(S.daily[d]&&S.daily[d].pt)||{}; return {n:items.length, done:items.filter(x=>(got[x.id]||0)>=(x.target||1)).length}; }
@@ -429,7 +434,8 @@ function dayItems(d){
   if(p.lift){ const l=sessOn(d,p.lift)||logsOn(d).find(x=>x.day!=="P")||null, n=exFor(p.lift).filter(e=>e.block!=="Prep"&&e.block!=="Finish").length;
     out.push({k:"lift", day:p.lift, when:"Lift", title:`Day ${p.lift} · ${LIFT_NAMES[p.lift]||""}`, sub:`${n} exercises${p.liftNote?" · "+p.liftNote:""}`, done:!!l&&l.status!=="in_progress", open:!!l&&l.status==="in_progress"}); }
   const tot=rr=>({miles:sum(rr.map(r=>r.miles)), timeSec:sum(rr.map(r=>r.timeSec))});
-  if(p.run&&p.run.miles>0){ const rr=runsOn(d), tt=/time trial/i.test(p.run.label||"");
+  if(p.run&&p.run.miles>0){ const rr=runsOn(d), tt=/time trial/i.test(p.run.label||""), w=warmState(d);
+    out.push({k:"warm", when:"Before the run", title:tt?"Warm-up · 15 to 20 min":"Warm-up · 5 min", sub:w.all?"Done":w.n?`${w.n} of ${w.list.length} done`:tt?"Easy running, drills, 4 strides":"Walk, leg swings, lunges, high knees", done:w.all||rr.length>0});
     out.push({k:"run", when:p.run.long?"Long run":"Run", title:shortRun(p.run), sub:rr.length?`${r1(sum(rr.map(r=>r.miles)))} mi · ${fmtPace(pace(tot(rr)))}/mi · HR ${rr[0].avgHR||"–"}`:tt?"All-out 5K":`HR under ${st.easyCap} · about ${Math.round(p.run.miles*easyPaceSec()/60)} min`, done:rr.length>0, runId:rr.length?rr[0].id:null}); }
   else if(runsOn(d).length){ const rr=runsOn(d); out.push({k:"run", when:"Run", title:`Run · ${r1(sum(rr.map(r=>r.miles)))} mi`, sub:`${fmtPace(pace(tot(rr)))}/mi · HR ${rr[0].avgHR||"–"}`, done:true, runId:rr[0].id}); }
   if(p.extra){ const l=sessOn(d,"P"), n=exFor("P").length;
@@ -437,11 +443,12 @@ function dayItems(d){
   if(p.soccer) out.push({k:"soc", when:"Soccer", title:"Soccer", sub:"Full intensity · counts as a hard day", done:d<todayISO()});
   home("day"); home("pm");
   return out; }
-const KCOL={run:"var(--run)", lift:"var(--lift)", pt:"var(--pt)", home:"var(--pt)", soc:"var(--soc)"};
+const KCOL={warm:"var(--run)", run:"var(--run)", lift:"var(--lift)", pt:"var(--pt)", home:"var(--pt)", soc:"var(--soc)"};
 function itemBtn(x, d){ const t=todayISO();
   if(x.k==="soc") return "";
   if(x.done&&x.k==="run"&&x.runId) return `<button class="tl-ok" type="button" style="color:${KCOL.run}" data-act="rundetail" data-id="${esc(x.runId)}" aria-label="Run details">${CHECK}</button>`;
   if(x.done&&x.k!=="home") return `<span class="tl-ok" style="color:${KCOL[x.k]}" aria-label="Done">${CHECK}</span>`;
+  if(x.k==="warm") return d===t?`<button class="go grey" type="button" data-act="warmup" data-d="${d}">${x.done?"Done":"Open"}</button>`:d>t?`<button class="go grey" type="button" data-act="runsheet" data-d="${d}">View</button>`:"";
   if(x.k==="home") return d===t?`<button class="go grey" type="button" data-act="ptslot" data-slot="${x.slot}">${x.done?"Done":"Open"}</button>`:"";
   if(d>t){ const v=x.k==="run"?`data-act="runsheet" data-d="${d}"`:`data-act="liftsheet" data-view="1" data-day="${esc(x.day)}"`; return `<button class="go grey" type="button" ${v}>View</button>`; }
   if(x.k==="pt"&&!x.has) return "";
@@ -476,6 +483,14 @@ function ptSlotSheet(slot, day){ const t=day||todayISO(), keep=(sh.querySelector
   const row=it=>{ const n=got[it.id]||0, tg=+it.target||1, full=n>=tg; return `<div class="row"><div class="main"><div class="t">${esc(it.name)}</div><div class="s">${esc([it.dose,it.freq].filter(Boolean).join(" · "))}</div></div><button type="button" class="ptc${full?" full":""}" data-act="ptinc" data-id="${esc(it.id)}" aria-label="${esc(it.name)}: ${n} of ${tg}">${full?CHECK:(tg>1?`${n}/${tg}`:"")}</button></div>`; };
   openSheet(navBar(navBtn("close","Done"),`${PT_SLOTS[slot]} PT<small>${x.done} of ${x.items.length} done</small>`,navBtn("ptedit","Edit"))+`<div class="sh-body"><div class="group">${x.items.map(row).join("")||'<div class="empty">Nothing here.</div>'}</div><div class="foot">${slot==="pm"?"After your cool-down. ":""}Tap after each round; tap a finished one to reset it.</div></div>`);
   sh.dataset.slot=slot; sh.dataset.pdate=t; if(day){ const b=sh.querySelector(".sh-body"); if(b) b.scrollTop=keep; } }
+function warmSheet(d){ const t=d||todayISO(), w=warmState(t), keep=(dlg.open&&sh.dataset.warm)?(sh.querySelector(".sh-body")||{}).scrollTop||0:0;
+  const row=([id,name,dose])=>{ const on=!!w.got[id]; return `<div class="row"><div class="main"><div class="t">${esc(name)}</div><div class="s">${esc(dose)}</div></div><button type="button" class="ptc${on?" full":""}" data-act="warmtick" data-id="${esc(id)}" aria-pressed="${on}" aria-label="${esc(name)}">${on?CHECK:""}</button></div>`; };
+  openSheet(navBar(navBtn("close","Done"),`Run Warm-Up<small>${w.n} of ${w.list.length} done</small>`,"")+`<div class="sh-body"><div class="group">${w.list.map(row).join("")}</div>
+    <div class="foot">Moving warm-ups get you ready to run. Save long stretches for after the run: holds of 60 seconds or more right before can briefly cut performance, and stretching alone hasn't been shown to prevent injury (Behm et al., Appl Physiol Nutr Metab, 2016; Lauersen et al., Br J Sports Med, 2014).</div></div>`);
+  sh.dataset.warm=t; const b=sh.querySelector(".sh-body"); if(b&&keep) b.scrollTop=keep; }
+async function warmTick(id){ const t=sh.dataset.warm||todayISO(), cur=Object.assign({}, S.daily[t]||{}), warm=Object.assign({}, cur.warm||{});
+  if(warm[id]) delete warm[id]; else warm[id]=true;
+  try{ await db.collection("daily").doc(t).set(Object.assign(cur,{date:t, warm})); }catch(err){ failed(err); } finally{ if(dlg.open&&sh.dataset.warm) warmSheet(t); } }
 function checkinSheet(){ const t=todayISO();
   openSheet(navBar(navBtn("close","Cancel"),"Check In",navBtn("feelsave","Save",'style="font-weight:600"'))+`<div class="sh-body">${feelCard(t)}
     <div class="group" style="margin-top:14px"><button class="row" type="button" data-act="logday"><div class="main"><div class="t">Add notes, sleep or weight</div></div>${CHEV}</button></div></div>`); }
@@ -657,7 +672,7 @@ window.addEventListener("scroll",()=>{ $("#nav").classList.toggle("scrolled", wi
 
 /* ---------- sheets ---------- */
 const dlg=$("#dlg"), sh=$("#sh");
-function openSheet(html, full){ dlg.className = full?"full":"sheet"; delete sh.dataset.slot; delete sh.dataset.pdate; sh.innerHTML=html; const tt=sh.querySelector(".ttl"); sh.dataset.key=(tt?tt.textContent:"")+"|"+((sh.querySelector("[data-i]")||{}).dataset||{}).i; draftRestore(); if(!dlg.open) dlg.showModal(); try{ sh.focus({preventScroll:true}); }catch(_){} }
+function openSheet(html, full){ dlg.className = full?"full":"sheet"; delete sh.dataset.slot; delete sh.dataset.pdate; delete sh.dataset.warm; sh.innerHTML=html; const tt=sh.querySelector(".ttl"); sh.dataset.key=(tt?tt.textContent:"")+"|"+((sh.querySelector("[data-i]")||{}).dataset||{}).i; draftRestore(); if(!dlg.open) dlg.showModal(); try{ sh.focus({preventScroll:true}); }catch(_){} }
 function closeSheet(){ if(dlg.open) dlg.close(); }
 const navBar=(l,title,r)=>`<div class="sh-nav"><div class="l">${l||""}</div><div class="ttl">${title}</div><div class="r">${r||""}</div></div>`;
 const navBtn=(act,label,extra)=>`<button class="nav-btn" type="button" data-act="${act}" ${extra||""}>${label}</button>`;
@@ -702,9 +717,9 @@ function runSheet(day){
   openSheet(navBar(navBtn("close","Close"),esc(shortRun(p.run)),"")+`<div class="sh-body"><div class="group">
     <div class="row"><div class="main"><div class="t">Distance</div></div><div class="v">${esc(p.run.miles)} mi</div></div>
     <div class="row"><div class="main"><div class="t">Heart rate</div></div><div class="v">${/time trial/i.test(p.run.label||"")?"No cap":"Under "+st.easyCap}</div></div>
-    <div class="row"><div class="main"><div class="t">Warm-up</div></div><div class="v">5 min</div></div></div>
+    <div class="row"><div class="main"><div class="t">Warm-up</div></div><div class="v">${/time trial/i.test(p.run.label||"")?"15 to 20 min":"5 min"}</div></div></div>
     <div class="sec"><div class="cap">Details</div><div class="group"><p class="para">${esc(p.run.detail||"")}</p></div></div>
-    <div class="sec"><div class="cap">Warm-up</div><div class="group"><ol class="steps"><li>Brisk walk, 2 minutes</li><li>Leg swings front to back, 10 per leg</li><li>Leg swings side to side, 10 per leg</li><li>Walking lunge with reach, 6 per leg</li><li>High knees and butt kicks, 2 × 15 s each</li></ol></div></div>
+    <div class="sec"><div class="cap">Warm-up</div><div class="group"><ol class="steps">${warmList(p).map(([,n,d])=>`<li>${esc(n)}, ${esc(d)}</li>`).join("")}</ol></div></div>
     <div class="sec"><div class="foot" style="padding-top:0">Your watch run imports tonight. Use + to add it by hand only if it doesn't.</div></div></div>`);
 }
 function runDetail(id){ const r=S.runs.find(x=>x.id===id); if(!r) return; const st=settings(), p=S.plan[r.date]||{}, g=r.shoe?gearItems().find(x=>x.id===r.shoe):gearItems().find(x=>x.default&&(!x.since||x.since<=r.date));
@@ -1223,7 +1238,7 @@ document.addEventListener("click", e=>{
   if(W && sh.contains(a)){ if(act==="exinfo"){ wPeek=true; exSheet(a.dataset.id); dlg.className="full"; } return; }
   if(act==="close"){ draftClear(); return closeSheet(); }
   if(!db){ toast("Saving isn't available here"); return; }
-  ({logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, metric:()=>metricSheet(a.dataset.k), mrange:()=>{ mRange=+a.dataset.n||90; metricSheet(a.dataset.k); }, sug:()=>sugSheet(a.dataset.id), rundetail:()=>runDetail(a.dataset.id), notfeeling:notFeelingSheet, nfsend:sendNotFeeling,
+  ({logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, warmup:()=>warmSheet(a.dataset.d), warmtick:()=>warmTick(a.dataset.id), metric:()=>metricSheet(a.dataset.k), mrange:()=>{ mRange=+a.dataset.n||90; metricSheet(a.dataset.k); }, sug:()=>sugSheet(a.dataset.id), rundetail:()=>runDetail(a.dataset.id), notfeeling:notFeelingSheet, nfsend:sendNotFeeling,
     nfpick:()=>{ nfPick=NF[+a.dataset.i]||""; sh.querySelectorAll('[data-act="nfpick"]').forEach(b=>b.setAttribute("aria-pressed", b===a)); }, ptslot:()=>ptSlotSheet(a.dataset.slot), updates:updList, checkins:checkinList, reqsave:saveReq,
     newreq:()=>reqForm(a.dataset.pre), attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),

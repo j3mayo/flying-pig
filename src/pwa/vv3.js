@@ -48,6 +48,13 @@ for(const scheme of ['light','dark']){
  const acts=await pg.$$eval('.tlc .go',x=>x.map(e=>e.dataset.act+':'+(e.dataset.day||'')+':'+e.textContent));
  ok(P+'run gets Log Run, lift and PT session get Start',acts.some(a=>a.startsWith('logrun::Log Run'))&&acts.some(a=>/^workout:C:(Start|Resume)/.test(a))&&acts.some(a=>/^workout:P:(Start|Resume)/.test(a)),acts.join(' | '));
  const order=await pg.$$eval('.tlc .k',x=>x.map(e=>e.textContent.toLowerCase()));
+ ok(P+'warm-up sits right before the run',(()=>{const i=order.findIndex(k=>k.includes('before the run'));return i>=0&&order[i+1]&&order[i+1].includes('run');})(),order.join(','));
+ await pg.tap('.tlc [data-act="warmup"]');await W(250);
+ ok(P+'warm-up opens a checklist',(await pg.textContent('.sh-nav .ttl')).startsWith('Run Warm-Up')&&(await pg.$$('.sh [data-act="warmtick"]')).length===7);
+ for(let i=0;i<7;i++){await pg.tap(`.sh [data-act="warmtick"] >> nth=${i}`);await W(150);}
+ ok(P+'warm-up checks save for today',await pg.evaluate(t=>Object.keys((__store['daily/'+t]||{}).warm||{}).length===7,tday)&&(await pg.textContent('.sh-nav .ttl small')).startsWith('7 of 7'));
+ await pg.tap('.sh [data-act="close"]');await W(250);
+ ok(P+'finished warm-up fades and is no longer up next',(await pg.$$eval('.tli',x=>x.map(e=>e.className+'|'+e.querySelector('.k').textContent.toLowerCase()))).some(c=>c.includes('done')&&c.includes('before the run'))&&!(await pg.textContent('.tli.next .k')).toLowerCase().includes('before the run'));
  ok(P+'Day C comes before the run',order.findIndex(k=>k.includes('lift'))<order.findIndex(k=>k.includes('run')),order.join(','));
  await pg.evaluate(t=>{const row={date:t,day:'C',status:'done',exercises:[{id:'c1',name:'Speed Smith squat',sets:[{load:'95',reps:'3',done:true}]}]};__store['liftlog/'+t]=row;__rt({eventType:'INSERT',new:{coll:'liftlog',id:t,data:row}});},tday);await W(300);
  await pg.tap('.tlc [data-act="workout"][data-day="P"]');await W(400);
