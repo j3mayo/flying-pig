@@ -252,6 +252,17 @@ dialog.sheet .sh-nav{padding-top:0;border-radius:14px 14px 0 0}
 .ckin{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:5;height:44px;padding:0 20px;border-radius:22px;background:var(--card-2);border:.5px solid rgba(255,255,255,.14);color:var(--label);font:600 15px var(--font);display:flex;align-items:center;gap:8px;white-space:nowrap;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.5)}
 .ckin i{width:7px;height:7px;border-radius:4px;background:var(--soc)}
 .ckin.did{color:var(--label-2)}.ckin svg{width:16px;height:16px;color:var(--good)}
+/* Plan */
+.prog{background:var(--card);border-radius:18px;padding:14px 16px 12px}
+.prog .ph,.prog .ends{display:flex;justify-content:space-between;gap:10px;white-space:nowrap}
+.prog .ph{font-size:15px;font-weight:600}.prog .ph span:last-child{color:var(--label-2);font-weight:500;overflow:hidden;text-overflow:ellipsis}
+.prog .bar{height:6px;border-radius:3px;background:var(--fill);margin:10px 0 6px;overflow:hidden}.prog .bar i{display:block;height:100%;background:#fff;border-radius:3px}
+.prog .ends{font-size:12px;color:var(--label-2);font-weight:600}
+.nf{display:flex;align-items:center;gap:10px;width:100%;margin-top:10px;background:var(--card);border:0;border-radius:14px;min-height:50px;padding:0 16px;color:var(--label);cursor:pointer;white-space:nowrap}
+.nf span{color:var(--label-2);font-size:15px}.nf b{flex:1;text-align:right;color:var(--tint);font-weight:600;font-size:15px}
+.nfck{color:transparent;width:22px;height:22px;flex:none}.nfck svg{width:20px;height:20px}
+[data-act="nfpick"][aria-pressed="true"] .nfck{color:var(--tint)}
+button.tl-ok{border:0;background:none;padding:0;cursor:pointer;width:44px;height:44px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -402,6 +413,7 @@ function dayItems(d){
 const KCOL={run:"var(--run)", lift:"var(--lift)", pt:"var(--pt)", home:"var(--pt)", soc:"var(--soc)"};
 function itemBtn(x, d){ const t=todayISO();
   if(x.k==="soc") return "";
+  if(x.done&&x.k==="run"&&x.runId) return `<button class="tl-ok" type="button" style="color:${KCOL.run}" data-act="rundetail" data-id="${esc(x.runId)}" aria-label="Run details">${CHECK}</button>`;
   if(x.done&&x.k!=="home") return `<span class="tl-ok" style="color:${KCOL[x.k]}" aria-label="Done">${CHECK}</span>`;
   if(x.k==="home") return d===t?`<button class="go grey" type="button" data-act="ptslot" data-slot="${x.slot}">${x.done?"Done":"Open"}</button>`:"";
   if(d>t){ const v=x.k==="run"?`data-act="runsheet" data-d="${d}"`:`data-act="liftsheet" data-day="${esc(x.day)}"`; return `<button class="go grey" type="button" ${v}>View</button>`; }
@@ -511,9 +523,9 @@ function viewRuns(){
   return `<div class="sub" style="margin:-4px 4px 14px">${total} mi logged · ${S.runs.length} runs</div>
   <div class="chart"><div class="k">This week</div><div class="n">${actMi}<small> of ${planMi} mi</small></div><div class="d">Green run · grey planned</div>${weeklyBars()}</div>
   <div class="sec chart"><div class="k">Easy pace · HR ≤ ${cap+2}</div><div class="n">${easy.length?fmtPace(easy[easy.length-1].y):"–"}<small> /mi latest</small></div><div class="take">${paceTake}</div>${lineChart(easy,{invert:true,fmt:fmtPace,label:"Easy pace over time",empty:"",pad:15,color:"var(--run)"})}</div>
-  <div class="sec chart"><div class="k">Long run</div><div class="n">${lastLong||"–"}<small> mi latest</small></div><div class="take">Next goal: 11 mi by Dec 26</div>${lineChart(longs,{fmt:v=>r1(v),label:"Long run distance",empty:"Saturday long runs appear here.",pad:1,color:"var(--run)"})}</div>
+  <div class="sec chart"><div class="k">Long run</div><div class="n">${lastLong||"–"}<small> mi latest</small></div><div class="take">${(()=>{ const fut=Object.values(S.plan).filter(x=>x.date>=todayISO()&&x.run&&x.run.long&&x.run.miles).sort((a,b)=>a.date.localeCompare(b.date)); if(!fut.length) return "Saturday long runs build week by week"; const top=fut.reduce((a,b)=>b.run.miles>a.run.miles?b:a); return `Next ${fut[0].run.miles} mi ${esc(fmtDate(fut[0].date))} · up to ${top.run.miles} mi by ${esc(shortDate(top.date))}`; })()}</div>${lineChart(longs,{fmt:v=>r1(v),label:"Long run distance",empty:"Saturday long runs appear here.",pad:1,color:"var(--run)"})}</div>
   <div class="sec"><div class="sec-h"><h2>Recent Runs</h2><button class="lnk" type="button" data-act="logrun">Add</button></div><div class="group">${
-    runs.length? runs.slice(0,20).map(r=>`<div class="row"><div class="main"><div class="t">${esc(fmtDate(r.date))}${r.long?" · Long":""}</div><div class="s">${fmtTime(r.timeSec)} · ${fmtPace(pace(r))}/mi · HR <span style="color:${r.avgHR>cap+2?"var(--warn)":"inherit"}">${r.avgHR||"–"}</span></div></div><div class="v" style="color:var(--label);font-weight:600">${r1(r.miles)} mi</div></div>`).join("")
+    runs.length? runs.slice(0,20).map(r=>`<button class="row" type="button" data-act="rundetail" data-id="${esc(r.id)}"><div class="main"><div class="t">${esc(fmtDate(r.date))}${r.long?" · Long":""}</div><div class="s">${fmtTime(r.timeSec)} · ${fmtPace(pace(r))}/mi · HR <span style="color:${r.avgHR>cap+2?"var(--warn)":"inherit"}">${r.avgHR||"–"}</span></div></div><div class="v" style="color:var(--label);font-weight:600">${r1(r.miles)} mi</div>${CHEV}</button>`).join("")
     : '<div class="empty">Runs from your Apple Watch import here each night.</div>'}</div></div>`;
 }
 
@@ -522,8 +534,11 @@ function viewPlan(){
   const segs=[["schedule","Schedule"],["runs","Runs"],["lifts","Lifts"]];
   const inner = planSeg==="runs"?viewRuns():planSeg==="lifts"?viewLifts():viewSchedule();
   return `<h1 class="large">Plan</h1><div class="seg" role="group" aria-label="Plan view" style="margin:10px 0 18px">${segs.map(([k,l])=>`<button type="button" data-pseg="${k}" aria-pressed="${k===planSeg}">${l}</button>`).join("")}</div>${inner}`; }
-function viewSchedule(){ const t=todayISO();
-  return `<div class="sec" style="margin-top:0"><div class="sec-h"><h2>Next 2 Weeks</h2></div><div class="group">${upcoming(t,14)}</div><div class="foot">The coach adds new weeks about two weeks ahead.</div></div>`; }
+function viewSchedule(){ const t=todayISO(), keys=Object.keys(S.plan).sort(), start=keys[0]||t, p=S.plan[t]||{};
+  const total=Math.max(1,daysBetween(start,RACE)), pct=Math.max(0,Math.min(100,Math.round(daysBetween(start,t)/total*100)));
+  return `<div class="prog"><div class="ph"><span>${p.week!=null?"Week "+esc(p.week):"Plan"}${p.phase?" · "+esc(String(p.phase).replace(/^Phase \d+\s*[:·-]?\s*/i,"")):""}</span><span>${pct}% · race in ${daysBetween(t,RACE)} days</span></div><div class="bar"><i style="width:${pct}%"></i></div><div class="ends"><span>${esc(shortDate(start))}</span><span>${esc(shortDate(RACE))}</span></div></div>
+  <button class="nf" type="button" data-act="notfeeling"><span>Not feeling 100%?</span><b>Adjust my plan</b>${CHEV}</button>
+  <div class="sec"><div class="sec-h"><h2>Next 2 Weeks</h2></div><div class="group">${upcoming(t,14)}</div><div class="foot">The coach adds new weeks about two weeks ahead.</div></div>`; }
 
 /* ---------- Lifts ---------- */
 const e1rm = (w,r) => r>0&&r<=12 ? w*(1+r/30) : null;
@@ -663,6 +678,23 @@ function runSheet(day){
     <div class="sec"><div class="cap">Warm-up</div><div class="group"><ol class="steps"><li>Brisk walk, 2 minutes</li><li>Leg swings front to back, 10 per leg</li><li>Leg swings side to side, 10 per leg</li><li>Walking lunge with reach, 6 per leg</li><li>High knees and butt kicks, 2 × 15 s each</li></ol></div></div>
     <div class="sec"><div class="foot" style="padding-top:0">Your watch run imports tonight. Use + to add it by hand only if it doesn't.</div></div></div>`);
 }
+function runDetail(id){ const r=S.runs.find(x=>x.id===id); if(!r) return; const st=settings(), p=S.plan[r.date]||{}, g=gearItems().find(x=>x.id===r.shoe)||gearItems().find(x=>x.default&&!x.retired);
+  const row=(k,v,c)=>`<div class="row"><div class="main"><div class="t">${k}</div></div><div class="v"${c?` style="color:${c}"`:""}>${v}</div></div>`;
+  const hot=r.avgHR&&!/time trial/i.test((p.run&&p.run.label)||"")&&r.avgHR>st.easyCap+2;
+  openSheet(navBar(navBtn("close","Close"),`${esc(fmtDate(r.date))}<small>${r.long?"Long run":"Run"}${r.source==="watch"?" · Apple Watch":""}</small>`,"")+`<div class="sh-body">
+    <div class="hero"><div class="big" style="font-size:44px">${r1(r.miles)}<small style="font-size:20px;color:var(--label-2)"> mi</small></div>${p.run&&p.run.miles?`<div class="pills"><span class="pill ${r.miles>=p.run.miles*.95?"good":"warn"}">Plan ${esc(p.run.miles)} mi</span>${hot?'<span class="pill warn">Above easy HR</span>':r.avgHR?'<span class="pill good">Easy effort</span>':""}</div>`:""}</div>
+    <div class="group">${row("Time",fmtTime(r.timeSec))}${row("Pace",fmtPace(pace(r))+" /mi")}${row("Avg heart rate",r.avgHR?r.avgHR+" bpm":"–",hot?"var(--warn)":"")}${row("Max heart rate",r.maxHR?r.maxHR+" bpm":"–")}${row("Elevation gain",r.elevFt!=null?Math.round(r.elevFt)+" ft":"–")}${row("Shoes",g?esc(g.name):"–")}</div>
+    ${r.notes?`<div class="sec"><div class="cap">Notes</div><div class="group"><p class="para">${esc(r.notes)}</p></div></div>`:""}
+    ${hot?`<div class="foot">Easy runs stay under ${st.easyCap} bpm. Slow down or walk the hills next time.</div>`:""}</div>`); }
+const NF=["Tired","Sore","Sick","Short on time","Something hurts"];
+let nfPick="";
+function notFeelingSheet(){ nfPick="";
+  openSheet(navBar(navBtn("close","Cancel"),"Not Feeling 100%",navBtn("nfsend","Send",'style="font-weight:600"'))+`<div class="sh-body">
+    <div class="cap">What's going on?</div><div class="group">${NF.map((x,i)=>`<button class="row" type="button" data-act="nfpick" data-i="${i}" aria-pressed="false"><div class="main"><div class="t">${x}</div></div><span class="nfck">${CHECK}</span></button>`).join("")}</div>
+    <div class="sec"><textarea class="ta" id="nfNote" style="min-height:90px" placeholder="Anything to add (optional)" aria-label="Details"></textarea></div>
+    <div class="foot">Tonight's review eases the next few days. Pain that's sharp or getting worse: stop and see your PT or a doctor.</div></div>`); }
+async function sendNotFeeling(){ if(!nfPick){ toast("Pick what's going on"); return; } const note=(($("#nfNote")||{}).value||"").trim();
+  await save(db.collection("requests").doc(Date.now().toString(36)), {created:new Date().toISOString(), kind:"change", status:"pending", reply:"", attachments:[], text:`Not feeling 100% (${nfPick})${note?": "+note:""}. Please ease the next few days.`}, "Sent. Tonight's review adjusts your plan."); }
 function reqForm(pre, keep){
   if(!keep) reqDraft={kind:"change", files:[], text:pre||""};
   const k=reqDraft.kind;
@@ -1105,7 +1137,8 @@ document.addEventListener("click", e=>{
   if(W && sh.contains(a)){ if(act==="exinfo"){ wPeek=true; exSheet(a.dataset.id); dlg.className="full"; } return; }
   if(act==="close"){ draftClear(); return closeSheet(); }
   if(!db){ toast("Saving isn't available here"); return; }
-  ({logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, ptslot:()=>ptSlotSheet(a.dataset.slot), updates:updList, checkins:checkinList, reqsave:saveReq,
+  ({logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, rundetail:()=>runDetail(a.dataset.id), notfeeling:notFeelingSheet, nfsend:sendNotFeeling,
+    nfpick:()=>{ nfPick=NF[+a.dataset.i]||""; sh.querySelectorAll('[data-act="nfpick"]').forEach(b=>b.setAttribute("aria-pressed", b===a)); }, ptslot:()=>ptSlotSheet(a.dataset.slot), updates:updList, checkins:checkinList, reqsave:saveReq,
     newreq:()=>reqForm(a.dataset.pre), attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),
     goal:()=>goalSheet(a.dataset.i), goalsave:()=>saveGoal(a.dataset.i), goaldel:()=>saveGoal(a.dataset.i,true),

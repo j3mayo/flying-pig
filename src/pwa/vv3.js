@@ -62,7 +62,12 @@ for(const scheme of ['light','dark']){
  await pg.tap('.tab[data-tab="plan"]');await W(250);
  const days=await pg.$$('#view .day');ok(P+'Plan schedule shows day cards with date blocks',days.length>=5&&!!(await pg.$('#view .day .dt .n')),String(days.length));
  await pg.tap('#view .day >> nth=0');await W(250);ok(P+'tapping a day opens its detail',(await pg.textContent('.sh-nav .ttl')).length>5&&(await pg.$$('.sh .group')).length>=1);await pg.tap('.sh [data-act="close"]');await W(200);
+ ok(P+'plan progress bar shows week and percent',/Week \d+/.test(await pg.textContent('.prog .ph'))&&/\d+% · race in \d+ days/.test(await pg.textContent('.prog .ph'))&&!/· ·/.test(await pg.textContent('.prog .ph')),await pg.textContent('.prog .ph'));
+ await pg.tap('[data-act="notfeeling"]');await W(250);await pg.tap('[data-act="nfsend"]');await W(200);ok(P+'Not feeling it needs a reason',(await pg.textContent('.toast')).includes('Pick'));
+ await pg.tap('[data-act="nfpick"][data-i="1"]');await pg.fill('#nfNote','Calves tight');await pg.tap('[data-act="nfsend"]');await W(300);
+ ok(P+'Not feeling it files a request for tonight',await pg.evaluate(()=>Object.values(__store).some(v=>v&&v.kind==='change'&&v.status==='pending'&&v.text==='Not feeling 100% (Sore): Calves tight. Please ease the next few days.')));
  await pg.tap('[data-pseg="runs"]');await W(200);ok(P+'Plan shows runs',(await pg.textContent('#view')).includes('Easy pace'));
+ await pg.tap('[data-act="rundetail"] >> nth=0');await W(250);ok(P+'tapping a run opens its detail',(await pg.$$eval('.sh .row .t',x=>x.map(e=>e.textContent))).join(',').includes('Avg heart rate'));await pg.tap('.sh [data-act="close"]');await W(200);
  await pg.tap('[data-pseg="lifts"]');await W(200);ok(P+'Plan shows lifts',!!(await pg.$('[data-lday="A"]')));
  await pg.evaluate(()=>{location.hash='runs';});await W(250);ok(P+'old #runs link opens Plan > Runs',(await pg.getAttribute('[data-pseg="runs"]','aria-pressed'))==='true');
  await pg.tap('.tab[data-tab="today"]');await W(250);
