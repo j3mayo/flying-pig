@@ -31,6 +31,7 @@ for(const scheme of ['light','dark']){
  await pg.screenshot({path:out+'-'+scheme+'-today.png',fullPage:true});
  await pg.tap('#view .day >> nth=0');await W(250);ok(P+'tapping a day opens its detail',(await pg.textContent('.sh-nav .ttl')).length>5&&(await pg.$$('.sh .group')).length>=1);await pg.tap('.sh [data-act="close"]');await W(200);
  // PT editor
+ ok(P+'Edit link is a 44 pt target',await pg.$eval('#view [data-act="ptedit"]',e=>e.getBoundingClientRect().height>=44));
  await pg.tap('#view [data-act="ptedit"]');await W(250);ok(P+'PT editor opens',(await pg.textContent('.sh-nav .ttl'))==='Edit PT');
  await pg.tap('[data-act="ptitem"][data-i="new"]');await W(200);await pg.fill('#piName','Neck rotation');await pg.fill('#piDose','2 x 10');await pg.selectOption('#piSlot','am');await pg.tap('[data-act="ptitemsave"]');await W(300);
  ok(P+'daily PT item added',await pg.evaluate(()=>__store['settings/ptDaily'].items.some(x=>x.name==='Neck rotation'&&x.slot==='am')));
@@ -44,6 +45,10 @@ for(const scheme of ['light','dark']){
  ok(P+'PT session exercise added',await pg.evaluate(()=>Object.values(__store).some(v=>v&&v.day==='P'&&v.name==='Prone Y')));
  ok(P+'new PT exercise gets its own block',await pg.evaluate(()=>{const v=Object.values(__store).find(v=>v&&v.day==='P'&&v.name==='Prone Y');return v&&v.block[0]!=='A';}));
  await pg.screenshot({path:out+'-'+scheme+'-ptedit.png',fullPage:true});
+ await pg.tap('[data-act="ptex"][data-id="p1"]');await W(200);await pg.fill('#peLoad','99s');await W(600);await pg.keyboard.press('Escape');await W(250);await pg.tap('#view [data-act="ptedit"]');await W(250);
+ const pyId=await pg.evaluate(()=>Object.entries(__store).find(([k,v])=>v&&v.day==='P'&&v.name==='Prone Y')[0].split('/')[1]);
+ await pg.tap(`[data-act="ptex"][data-id="${pyId}"]`);await W(250);ok(P+'unsaved edits stay with their own exercise',(await pg.inputValue('#peLoad'))!=='99s'&&(await pg.inputValue('#peName'))==='Prone Y');
+ ok(P+'new PT exercise id is never reused',/^p-/.test(pyId),pyId);await pg.tap('.sh [data-act="ptedit"]');await W(200);
  const ptHas=()=>pg.evaluate(()=>__store['settings/ptDaily'].items.some(x=>x.name==='Neck rotation'));
  await pg.evaluate(()=>{const d=__store['settings/ptDaily'];d.items.unshift({id:'zz-live',slot:'pm',name:'Live insert',dose:'1',target:1});});
  const nk=await pg.$eval('[data-act="ptitem"]:has-text("Neck rotation")',e=>e.dataset.i);await pg.tap(`[data-act="ptitem"][data-i="${nk}"]`);await W(200);
@@ -102,7 +107,7 @@ for(const scheme of ['light','dark']){
  ok(P+'a set can be deleted',(await cnt())===c0-1,c0+' -> '+(await cnt()));
  // swap for today + keep going forward
  await pg.tap(`[data-w="swap"][data-e="${ex0}"]`);await W(250);
- const sw=await pg.$$eval('[data-w="swappick"]',x=>x.map(e=>e.textContent));ok(P+'Swap lists same-job exercises with loads',sw.some(t=>t.includes('Barbell back squat')&&t.includes('155')),sw.join(' | '));
+ const sw=await pg.$$eval('[data-w="swappick"]',x=>x.map(e=>e.textContent));ok(P+'Swap lists same-job exercises with loads',sw.some(t=>/Barbell back squat.*\d+ · \d+ x \d+/.test(t)),sw.join(' | '));
  await pg.check('#swPerm');const rq0=await pg.evaluate(()=>Object.keys(__store).filter(k=>k.startsWith('requests/')).length);
  await pg.tap('[data-w="swappick"] >> nth=0');await W(300);
  ok(P+'swap applied in the workout',(await pg.textContent('.sh-body')).includes('instead of Smith squat'));

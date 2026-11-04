@@ -40,7 +40,7 @@ button{font:inherit;color:inherit}
 .sec{margin-top:22px}
 .sec-h{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 7px;gap:10px}
 .sec-h h2{font:600 20px var(--font-d);margin:0;letter-spacing:.01em}
-.sec-h .lnk{color:var(--tint);font-size:15px;background:none;border:0;cursor:pointer;padding:0}
+.sec-h .lnk{color:var(--tint);font-size:15px;background:none;border:0;cursor:pointer;padding:0 4px;min-height:44px;margin:-13px -4px;display:inline-flex;align-items:center}
 .cap{color:var(--label-2);font-size:13px;text-transform:uppercase;letter-spacing:.02em;padding:0 16px 7px}
 .foot{color:var(--label-2);font-size:13px;padding:7px 16px 0}
 .group{background:var(--card);border-radius:12px;overflow:hidden}
@@ -395,9 +395,10 @@ function viewToday(){
   <div class="sec"><div class="sec-h"><h2>This Week</h2></div><div class="group wk">${strip}</div></div>
   <div class="sec"><div class="sec-h"><h2>Coming Up</h2></div><div class="group">${upcoming(t)}</div></div>`;
 }
-function ptCard(t){ const items=(S.ptDaily&&S.ptDaily.items)||[]; if(!items.length) return ""; const got=(S.daily[t]&&S.daily[t].pt)||{};
+function ptCard(t){ const items=(S.ptDaily&&S.ptDaily.items)||[];
+  if(!items.length) return `<div class="sec" id="eveningPT"><div class="sec-h"><h2>PT Today</h2><button class="lnk" type="button" data-act="ptedit">Edit</button></div><div class="group"><div class="empty">No home PT items. Tap Edit to add one.</div></div></div>`; const got=(S.daily[t]&&S.daily[t].pt)||{};
   const done=items.filter(x=>(got[x.id]||0)>=(x.target||1)).length;
-  const row=x=>{ const n=got[x.id]||0, tg=x.target||1, full=n>=tg; return `<div class="row"><div class="main"><div class="t">${esc(x.name)}</div><div class="s">${esc(x.dose)} · ${esc(x.freq||"")}</div></div><button type="button" class="ptc${full?" full":""}" data-act="ptinc" data-id="${esc(x.id)}" aria-label="${esc(x.name)}: ${n} of ${tg}">${full?CHECK:(tg>1?`${n}/${tg}`:"")}</button></div>`; };
+  const row=x=>{ const n=got[x.id]||0, tg=x.target||1, full=n>=tg; return `<div class="row"><div class="main"><div class="t">${esc(x.name)}</div><div class="s">${esc(x.dose)} · ${esc(x.freq||"")}</div></div><button type="button" class="ptc${full?" full":""}" data-act="ptinc" data-id="${esc(x.id)}" aria-label="${esc(x.name)}: ${n} of ${+tg}">${full?CHECK:(tg>1?`${n}/${+tg}`:"")}</button></div>`; };
   const SLOTS=[["am","Morning"],["day","Through the day"],["pm","Evening · after your cool-down"]];
   const groups=SLOTS.map(([k,l])=>{ const xs=items.filter(x=>(x.slot||"pm")===k); return xs.length?`<div class="cap" style="padding-top:12px">${l}</div><div class="group">${xs.map(row).join("")}</div>`:""; }).join("");
   return `<div class="sec" id="eveningPT"><div class="sec-h"><h2>PT Today</h2><span style="display:flex;gap:14px;align-items:baseline"><span class="foot" style="padding:0">${done} of ${items.length}</span><button class="lnk" type="button" data-act="ptedit">Edit</button></span></div>${groups}<div class="foot">At home, from your PT plan. Tap after each round; tap a finished one to reset it.</div></div>`; }
@@ -415,35 +416,38 @@ const ptIdx=(items,k)=>{ const j=items.findIndex(x=>x.id===k); return j>=0?j:(/^
 let ptDelArm=null;
 function ptItemSheet(i){ ptDelArm=null; const items=(S.ptDaily&&S.ptDaily.items)||[], it=i==="new"?{name:"",dose:"",target:1,freq:"",slot:"pm"}:items[ptIdx(items,i)]||{};
   openSheet(navBar(navBtn("ptedit","Back"),i==="new"?"New PT Item":"PT Item",navBtn("ptitemsave","Save",`style="font-weight:600" data-i="${esc(i)}"`))+`<div class="sh-body"><div class="group">
-    <div class="frow"><input id="piName" value="${esc(it.name)}" placeholder="Name" aria-label="Name" style="flex:1;text-align:left;color:var(--label);font-weight:600"></div>
+    <div class="frow"><input id="piName" maxlength="60" value="${esc(it.name)}" placeholder="Name" aria-label="Name" style="flex:1;text-align:left;color:var(--label);font-weight:600"></div>
     ${frow('<label for="piDose">Dose</label>',`<input id="piDose" value="${esc(it.dose)}" placeholder="10 x 5 s">`)}
     ${frow('<label for="piTarget">Times a day</label>',`<input id="piTarget" inputmode="numeric" value="${esc(it.target||1)}">`)}
     ${frow('<label for="piSlot">When</label>',`<select id="piSlot">${["am","day","pm"].map(k=>`<option value="${k}" ${(it.slot||"pm")===k?"selected":""}>${SLOTNAME[k]}</option>`).join("")}</select>`)}
     ${frow('<label for="piFreq">Note</label>',`<input id="piFreq" value="${esc(it.freq||"")}" placeholder="Light, don't overdo">`)}</div>
     ${i!=="new"?`<div class="sec"><button class="btn-big sec2" type="button" data-act="ptitemdel" data-i="${esc(i)}" style="color:var(--bad)">Remove Item</button></div>`:""}</div>`); }
-async function ptItemSave(i, del){ const items=[...((S.ptDaily&&S.ptDaily.items)||[])], j=i==="new"?-1:ptIdx(items,i);
+let ptBusy=false;
+async function ptItemSave(i, del){ if(ptBusy) return; const items=[...((S.ptDaily&&S.ptDaily.items)||[])], j=i==="new"?-1:ptIdx(items,i);
   if(i!=="new"&&j<0){ toast("That item changed. Try again."); ptEditSheet(); return; }
   if(del){ if(ptDelArm!=="i"+i){ ptDelArm="i"+i; const b=$('[data-act="ptitemdel"]'); if(b) b.textContent="Tap Again to Remove"; return; } items.splice(j,1); }
   else { const name=($("#piName")||{}).value.trim(); if(!name){ toast("Add a name"); return; }
     const it={name, dose:$("#piDose").value.trim(), target:Math.max(1,Math.min(10,parseInt($("#piTarget").value)||1)), slot:$("#piSlot").value, freq:$("#piFreq").value.trim()};
-    if(i==="new") items.push(Object.assign({id:"pt-"+Date.now().toString(36)}, it)); else items[j]=Object.assign({}, items[j], it); }
-  try{ await db.doc("settings/ptDaily").set(Object.assign({}, S.ptDaily||{}, {items, updated:todayISO()})); draftClear(); toast(del?"Item removed":"Saved"); ptEditSheet(); }catch(err){ failed(err); } }
+    if(i==="new") items.push(Object.assign({id:"pt-"+Date.now().toString(36)}, it)); else items[j]=Object.assign({id:items[j].id||"pt-"+Date.now().toString(36)}, items[j], it); }
+  ptBusy=true; try{ await db.doc("settings/ptDaily").set(Object.assign({}, S.ptDaily||{}, {items, updated:todayISO()})); draftClear(); toast(del?"Item removed":"Saved"); ptEditSheet(); }catch(err){ failed(err); }finally{ ptBusy=false; } }
 function ptExSheet(id){ ptDelArm=null; const e=id==="new"?{name:"",load:"",scheme:"3 x 10",cue:""}:S.loads.find(x=>x.id===id)||{};
-  openSheet(navBar(navBtn("ptedit","Back"),id==="new"?"New Exercise":"PT Exercise",navBtn("ptexsave","Save",`style="font-weight:600" data-id="${esc(id)}"`))+`<div class="sh-body"><div class="group">
-    <div class="frow"><input id="peName" value="${esc(e.name)}" placeholder="Exercise" aria-label="Exercise" style="flex:1;text-align:left;color:var(--label);font-weight:600"></div>
+  openSheet(navBar(navBtn("ptedit","Back"),id==="new"?"New Exercise":"PT Exercise",navBtn("ptexsave","Save",`style="font-weight:600" data-id="${esc(id)}" data-i="ex-${esc(id)}"`))+`<div class="sh-body"><div class="group">
+    <div class="frow"><input id="peName" maxlength="60" value="${esc(e.name)}" placeholder="Exercise" aria-label="Exercise" style="flex:1;text-align:left;color:var(--label);font-weight:600"></div>
     ${frow('<label for="peLoad">Weight</label>',`<input id="peLoad" value="${esc(e.load||"")}" placeholder="35s">`)}
     ${frow('<label for="peScheme">Sets x reps</label>',`<input id="peScheme" value="${esc(e.scheme||"")}" placeholder="3 x 10">`)}
     ${frow('<label for="peCue">Cue</label>',`<input id="peCue" value="${esc(e.cue||"")}" placeholder="5-sec hold">`)}</div>
     ${id!=="new"?`<div class="sec"><button class="btn-big sec2" type="button" data-act="ptexdel" data-id="${esc(id)}" style="color:var(--bad)">Remove from PT Session</button></div>`:""}</div>`); }
-async function ptExSave(id, del){ try{
+async function ptExSave(id, del){ if(ptBusy) return;
+  if(id!=="new"&&!S.loads.some(x=>x.id===id)){ toast("That exercise changed. Try again."); ptEditSheet(); return; }
+  ptBusy=true; try{
   if(del){ if(ptDelArm!=="e"+id){ ptDelArm="e"+id; const b=$('[data-act="ptexdel"]'); if(b) b.textContent="Tap Again to Remove"; return; }
     await db.collection("loads").doc(id).delete(); toast("Removed"); ptEditSheet(); return; }
   const name=($("#peName")||{}).value.trim(); if(!name){ toast("Add a name"); return; }
   const upd={name, load:$("#peLoad").value.trim(), scheme:$("#peScheme").value.trim()||"3 x 10", cue:$("#peCue").value.trim()};
-  if(id==="new"){ const ses=exFor("P"); let n=1; while(S.loads.some(l=>l.id==="p"+n)) n++; const order=Math.max(0,...ses.map(x=>+x.order||0))+1;
-    await db.collection("loads").doc("p"+n).set(Object.assign({day:"P", order, block:(("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").find(L=>!ses.some(x=>(x.block||"")[0]===L)))||"Z")+"1", pt:true, track:false, rest:60, tempo:"", hold:"", how:[], why:"Added to your PT session."}, upd)); }
+  if(id==="new"){ const ses=exFor("P"), nid="p-"+Date.now().toString(36); const order=Math.max(0,...ses.map(x=>+x.order||0))+1;
+    await db.collection("loads").doc(nid).set(Object.assign({day:"P", order, block:(("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").find(L=>!ses.some(x=>(x.block||"")[0]===L)))||"Z")+"1", pt:true, track:false, rest:60, tempo:"", hold:"", how:[], why:"Added to your PT session."}, upd)); }
   else await db.collection("loads").doc(id).update(upd);
-  draftClear(); toast("Saved"); ptEditSheet(); }catch(err){ failed(err); } }
+  draftClear(); toast("Saved"); ptEditSheet(); }catch(err){ failed(err); }finally{ ptBusy=false; } }
 async function ptInc(id){ const t=todayISO(), it=((S.ptDaily&&S.ptDaily.items)||[]).find(x=>x.id===id); if(!it) return; const cur=Object.assign({}, S.daily[t]||{}), pt=Object.assign({}, cur.pt||{}); const tg=it.target||1;
   pt[id]=(pt[id]||0)>=tg?0:(pt[id]||0)+1; try{ await db.collection("daily").doc(t).set(Object.assign(cur,{date:t, pt})); }catch(err){ failed(err); } }
 function shortRun(r){ return (r.label||("Easy "+r.miles+" mi")).replace(/\s*\(long run\)/i," long run").replace(/\s*\(.*?\)\s*/g," ").trim(); }
@@ -1060,7 +1064,7 @@ document.addEventListener("click", e=>{
     newreq:()=>reqForm(a.dataset.pre), attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),
     goal:()=>goalSheet(a.dataset.i), goalsave:()=>saveGoal(a.dataset.i), goaldel:()=>saveGoal(a.dataset.i,true),
-    daysheet:()=>daySheet(a.dataset.d), ptedit:ptEditSheet, ptitem:()=>ptItemSheet(a.dataset.i), ptitemsave:()=>ptItemSave(a.dataset.i), ptitemdel:()=>ptItemSave(a.dataset.i,true), ptex:()=>ptExSheet(a.dataset.id), ptexsave:()=>ptExSave(a.dataset.id), ptexdel:()=>ptExSave(a.dataset.id,true), gopt:()=>{ const el=document.getElementById("eveningPT"); if(el) el.scrollIntoView({behavior:"smooth", block:"start"}); }, ptinc:()=>ptInc(a.dataset.id), sugadd:()=>sugAct(a.dataset.id,true), sugno:()=>sugAct(a.dataset.id,false),
+    daysheet:()=>daySheet(a.dataset.d), ptedit:()=>{ if(dlg.open) draftClear(); ptEditSheet(); }, ptitem:()=>ptItemSheet(a.dataset.i), ptitemsave:()=>ptItemSave(a.dataset.i), ptitemdel:()=>ptItemSave(a.dataset.i,true), ptex:()=>ptExSheet(a.dataset.id), ptexsave:()=>ptExSave(a.dataset.id), ptexdel:()=>ptExSave(a.dataset.id,true), gopt:()=>{ const el=document.getElementById("eveningPT"); if(el) el.scrollIntoView({behavior:"smooth", block:"start"}); }, ptinc:()=>ptInc(a.dataset.id), sugadd:()=>sugAct(a.dataset.id,true), sugno:()=>sugAct(a.dataset.id,false),
     altreq:()=>{ const x=exAlt[+a.dataset.k]; if(!x||!exAltFor) return; save(db.collection("requests").doc(Date.now().toString(36)), {created:new Date().toISOString(), kind:"change", status:"pending", reply:"", attachments:[], text:`Swap ${exAltFor.name} for ${x.name} going forward (${x.load} · ${x.scheme}). Equipment.`}, "Swap requested. Reviewed tonight."); },
     liftsheet:()=>liftSheet(a.dataset.day), workout:()=>startWorkout(a.dataset.day||"A")}[act]||(()=>{}))();
 });
