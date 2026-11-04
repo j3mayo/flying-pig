@@ -31,6 +31,7 @@ for(const scheme of ['light','dark']){
  // Today: timeline with a button per session type
  await pg.screenshot({path:out+'-'+scheme+'-today.png',fullPage:true});
  ok(P+'Today shows race countdown and date',/Race in \d+ days/i.test(await pg.textContent('.tk'))&&/^\w+day, \w{3} \d+$/.test(await pg.textContent('.dt1')),await pg.textContent('.dt1'));
+ ok(P+'race countdown bar fills toward race day',await pg.$eval('.cdb i',e=>{const w=parseFloat(e.style.width);return w>0&&w<=100;})&&/\d+ days until race day/.test(await pg.getAttribute('.cd','aria-label')));
  ok(P+'three rings: miles, lifts, PT',(await pg.$$eval('.rt span',x=>x.map(e=>e.textContent.split(' ')[0]).join(',')))==='Miles,Lifts,PT');
  ok(P+'timeline lists the day',(await pg.$$('.tl .tli')).length>=1);
  ok(P+'session buttons are 44 pt targets',await pg.$$eval('.tlc .go, .ckin',x=>x.length>0&&x.every(e=>e.getBoundingClientRect().height>=44)));
@@ -49,9 +50,12 @@ for(const scheme of ['light','dark']){
  const order=await pg.$$eval('.tlc .k',x=>x.map(e=>e.textContent.toLowerCase()));
  ok(P+'Day C comes before the run',order.findIndex(k=>k.includes('lift'))<order.findIndex(k=>k.includes('run')),order.join(','));
  await pg.evaluate(t=>{const row={date:t,day:'C',status:'done',exercises:[{id:'c1',name:'Speed Smith squat',sets:[{load:'95',reps:'3',done:true}]}]};__store['liftlog/'+t]=row;__rt({eventType:'INSERT',new:{coll:'liftlog',id:t,data:row}});},tday);await W(300);
- await pg.tap('.tlc [data-act="workout"][data-day="P"]');await W(300);
- ok(P+'a second session never replaces one already logged today',await pg.evaluate(t=>__store['liftlog/'+t].day==='C',tday)&&(await pg.textContent('.toast')).includes('already logged')&&!(await pg.evaluate(()=>document.getElementById('dlg').open)));
- await pg.evaluate(t=>{delete __store['liftlog/'+t];__rt({eventType:'DELETE',old:{coll:'liftlog',id:t}});},tday);await W(300);
+ await pg.tap('.tlc [data-act="workout"][data-day="P"]');await W(400);
+ ok(P+'PT session starts on a day a lift is already logged',await pg.evaluate(()=>document.getElementById('dlg').open)&&(await pg.textContent('.sh-nav .ttl')).startsWith('PT Session'));
+ await pg.tap('[data-w="tick"] >> nth=1');await W(200);await pg.tap('[data-w="finish"] >> nth=0');await W(500);
+ ok(P+'both sessions are kept for the day',await pg.evaluate(t=>__store['liftlog/'+t].day==='C'&&__store['liftlog/'+t+'~P']&&__store['liftlog/'+t+'~P'].day==='P'&&__store['liftlog/'+t+'~P'].date===t&&!('docId' in __store['liftlog/'+t+'~P']),tday));
+ ok(P+'timeline shows both as done',(await pg.$$('.tli.done')).length>=2);
+ await pg.evaluate(t=>{for(const id of [t,t+'~P']){delete __store['liftlog/'+id];__rt({eventType:'DELETE',old:{coll:'liftlog',id}});}},tday);await W(300);
  const nextWk=await pg.$eval('.wkb[aria-label="Next week"]',e=>e.dataset.sday);await pg.tap('.wkb[aria-label="Next week"]');await W(250);
  ok(P+'week arrows move a week',(await pg.getAttribute('.wd.on','data-sday'))===nextWk&&(await pg.$$('.wd')).length===7);
  const vw=await pg.$('.tlc [data-act="liftsheet"][data-view="1"]');if(vw){await vw.tap();await W(250);ok(P+'viewing a future lift has no Start button',!(await pg.$('.sh [data-act="workout"]')));await pg.tap('.sh [data-act="close"]');await W(200);}

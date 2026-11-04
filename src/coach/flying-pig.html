@@ -216,13 +216,19 @@ dialog.sheet .sh-nav{padding-top:0;border-radius:14px 14px 0 0}
 .ptc.full{background:var(--good);color:#fff}.ptc svg{width:18px;height:18px}
 .ms-when{font-size:13px;color:var(--label-2);text-align:right;white-space:nowrap;flex:none}
 /* Today timeline */
-.tkrow{display:flex;align-items:center;justify-content:space-between;min-height:30px;margin-top:4px}
+.cd{margin-top:6px}
+.cdt{display:flex;align-items:center;justify-content:space-between;min-height:30px;gap:10px}
+.cdd{font-size:13px;font-weight:600;color:var(--label-2);white-space:nowrap}
+.cdb{height:6px;border-radius:3px;background:var(--card-2);overflow:hidden;margin-top:4px}
+.cdb i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--run),#fff)}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:10px}
 .tk{font-size:13px;font-weight:700;color:var(--label-2);letter-spacing:.06em;text-transform:uppercase}
-.lnk.back{margin:-7px 2px -7px -4px}
+.lnk.back{margin:-7px -4px;font-size:14px}
 .wkn{display:flex;align-items:center}
-.wkb{width:44px;height:36px;border:0;background:none;color:var(--tint);font:500 26px/1 var(--font);cursor:pointer;margin:-4px -6px -4px 0}
-.dt1{font-size:30px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@media (max-width:380px){.dt1{font-size:26px}} @media (max-width:340px){.dt1{font-size:22px}}
+.wkn{flex:none}
+.wkb{width:40px;height:44px;border:0;background:none;color:var(--tint);font:500 28px/1 var(--font);cursor:pointer;padding:0}
+.dt1{font-size:25px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;margin:0}
+@media (max-width:380px){.dt1{font-size:23px}} @media (max-width:340px){.dt1{font-size:18px}}
 .lnk.back,.lnk.upd{background:none;border:0;color:var(--tint);font-size:15px;min-height:44px;padding:0 4px;cursor:pointer}
 .r3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
 .rt{background:var(--card);border-radius:18px;padding:12px 6px 10px;text-align:center;position:relative;min-width:0}
@@ -350,7 +356,11 @@ const settings = () => Object.assign({maxHR:188, easyCap:143, shoeName:"", shoeS
 const runsOn = d => S.runs.filter(r=>r.date===d);
 const weekRuns = m => S.runs.filter(r=>r.date>=m && r.date<=addDays(m,6));
 const weekDays = m => Array.from({length:7},(_,i)=>{ const d=addDays(m,i); return {date:d, p:S.plan[d]||null}; });
-const liftDone = d => !!S.liftlog[d] && S.liftlog[d].status!=="in_progress";
+/* Sessions: the first one of a day is liftlog/{date}; another session the same day is liftlog/{date}~{day} (e.g. a lift and the PT session). */
+const logsOn = d => Object.values(S.liftlog).filter(l=>l.date===d);
+const sessOn = (d, day) => logsOn(d).find(l=>l.day===day) || null;
+function sessId(d, day){ const own=Object.entries(S.liftlog).find(([,l])=>l.date===d&&l.day===day); if(own) return own[0]; return S.liftlog[d] ? d+"~"+day : d; }
+const liftDone = d => logsOn(d).some(l=>l.day!=="P"&&l.status!=="in_progress");
 function dayStatus(d){
   const p = S.plan[d], ran = runsOn(d).length>0, lifted = liftDone(d);
   const wantRun = p && p.run && p.run.miles>0, wantLift = p && p.lift;
@@ -410,14 +420,13 @@ const PT_SLOTS = {am:"Morning", day:"Through the day", pm:"Evening"};
 function ptSlot(d, slot){ const items=((S.ptDaily&&S.ptDaily.items)||[]).filter(x=>(x.slot||"pm")===slot), got=(S.daily[d]&&S.daily[d].pt)||{};
   const done=items.filter(x=>(got[x.id]||0)>=(x.target||1)).length; return {items, done, all:items.length>0&&done===items.length}; }
 function ptToday(d){ const items=(S.ptDaily&&S.ptDaily.items)||[], got=(S.daily[d]&&S.daily[d].pt)||{}; return {n:items.length, done:items.filter(x=>(got[x.id]||0)>=(x.target||1)).length}; }
-const sessOn = (d, day) => { const l=S.liftlog[d]; return l&&l.day===day ? l : null; };
 function easyPaceSec(){ const cap=settings().easyCap; const e=[...S.runs].filter(r=>r.avgHR&&r.avgHR<=cap+2&&pace(r)).sort((a,b)=>a.date.localeCompare(b.date)); return e.length?pace(e[e.length-1]):570; }
 /* The day in the order he does it: morning PT, lift (Day C comes before the run), run, PT session, soccer, home PT through the day and evening. */
 function dayItems(d){
   const p=S.plan[d]||{}, out=[], st=settings();
   const home=slot=>{ const x=ptSlot(d,slot); if(!x.items.length) return; out.push({k:"home", slot, when:PT_SLOTS[slot], title:"PT at home", sub:x.all?`${x.done} of ${x.items.length} done`:x.done?`${x.items.length-x.done} left`:x.items.map(i=>i.name).join(", "), done:x.all}); };
   home("am");
-  if(p.lift){ const any=S.liftlog[d], l=sessOn(d,p.lift)||(any&&any.day!=="P"?any:null), n=exFor(p.lift).filter(e=>e.block!=="Prep"&&e.block!=="Finish").length;
+  if(p.lift){ const l=sessOn(d,p.lift)||logsOn(d).find(x=>x.day!=="P")||null, n=exFor(p.lift).filter(e=>e.block!=="Prep"&&e.block!=="Finish").length;
     out.push({k:"lift", day:p.lift, when:"Lift", title:`Day ${p.lift} · ${LIFT_NAMES[p.lift]||""}`, sub:`${n} exercises${p.liftNote?" · "+p.liftNote:""}`, done:!!l&&l.status!=="in_progress", open:!!l&&l.status==="in_progress"}); }
   const tot=rr=>({miles:sum(rr.map(r=>r.miles)), timeSec:sum(rr.map(r=>r.timeSec))});
   if(p.run&&p.run.miles>0){ const rr=runsOn(d), tt=/time trial/i.test(p.run.label||"");
@@ -446,14 +455,16 @@ function weekStrip(m, sel){ const t=todayISO();
 function viewToday(){
   const t=todayISO(), d=selDay||t, m=monday(t), wk=weekDays(m);
   const planMi=sum(wk.map(x=>x.p&&x.p.run?x.p.run.miles:0)), actMi=sum(weekRuns(m).map(r=>r.miles));
-  const liftPlan=wk.filter(x=>x.p&&x.p.lift).length, liftsDone=wk.filter(x=>liftDone(x.date)&&S.liftlog[x.date].day!=="P").length, pt=ptToday(t);
+  const liftPlan=wk.filter(x=>x.p&&x.p.lift).length, liftsDone=wk.filter(x=>liftDone(x.date)).length, pt=ptToday(t);
   const tile=(v,cap,frac,col)=>`<div class="rt"><svg viewBox="0 0 66 66" aria-hidden="true">${ring(33,27,7,frac,col)}</svg><b>${v}</b><span>${cap}</span></div>`;
   const items=dayItems(d); let nextSet=false;
   const tl=items.map(x=>{ const next=d===t&&!x.done&&!nextSet&&x.k!=="soc"; if(next) nextSet=true;
     const lab=x.done?`${x.when} · done`:next?`Up next · ${x.when}`:x.when;
     return `<div class="tli${x.done?" done":""}${next?" next":""}" style="--c:${KCOL[x.k]}"><i class="tdot"></i><div class="tlc"><div class="main"><div class="k">${esc(lab)}</div><div class="t">${esc(x.title)}</div>${x.sub?`<div class="s">${esc(x.sub)}</div>`:""}</div>${itemBtn(x,d)}</div></div>`; }).join("");
   const p=S.plan[d]||{}, fresh=S.updates.filter(u=>u.date>=addDays(t,-1)).length, checked=S.daily[t]&&S.daily[t].energy!=null;
-  return `<div class="tkrow"><div class="tk">Race in ${daysBetween(t,RACE)} days</div><span class="wkn">${d!==t?`<button class="lnk back" type="button" data-sday="${t}">Today</button>`:""}<button class="wkb" type="button" data-sday="${addDays(d,-7)}" aria-label="Previous week">‹</button><button class="wkb" type="button" data-sday="${addDays(d,7)}" aria-label="Next week">›</button></span></div><h1 class="large dt1">${esc(longDate(d).replace(/^(\w+), (\w{3})\w* /,"$1, $2 "))}</h1>
+  const pk=Object.keys(S.plan).sort(), start=pk[0]&&pk[0]<t?pk[0]:"2026-10-24", left=daysBetween(t,RACE), fill=Math.max(2,Math.min(100,Math.round(daysBetween(start,t)/Math.max(1,daysBetween(start,RACE))*100)));
+  return `<div class="cd" role="img" aria-label="${left} days until race day"><div class="cdt"><span class="tk">Race in ${left} days</span>${d!==t?`<button class="lnk back" type="button" data-sday="${t}">Back to today</button>`:`<span class="cdd">${esc(shortDate(RACE))}</span>`}</div><div class="cdb"><i style="width:${fill}%"></i></div></div>
+  <div class="hrow"><h1 class="large dt1">${esc(longDate(d).replace(/^(\w+), (\w{3})\w* /,"$1, $2 "))}</h1><span class="wkn"><button class="wkb" type="button" data-sday="${addDays(d,-7)}" aria-label="Previous week">‹</button><button class="wkb" type="button" data-sday="${addDays(d,7)}" aria-label="Next week">›</button></span></div>
   <div class="r3">${tile(r1(actMi),`Miles /${r1(planMi)}`,planMi?actMi/planMi:0,"var(--run)")}${tile(liftsDone,`Lifts /${liftPlan}`,liftPlan?liftsDone/liftPlan:0,"var(--lift)")}${tile(pt.done,`PT /${pt.n}`,pt.n?pt.done/pt.n:0,"var(--pt)")}</div>
   ${weekStrip(monday(d), d)}
   <div class="tl">${tl||`<div class="tli" style="--c:var(--label-3)"><i class="tdot"></i><div class="tlc"><div class="main"><div class="k">Rest day</div><div class="t">Recovery is training too</div></div></div></div>`}</div>
@@ -821,7 +832,7 @@ function liftForm(){
   $("#fLift").addEventListener("submit", async e=>{ e.preventDefault();
     const date=$("#lDate").value, day=$("#lDay").value;
     const done=[...document.querySelectorAll("#lEx .frow")].map(r=>{ const [a,b]=r.querySelectorAll("input"); return {id:r.dataset.id, load:a.value.trim(), scheme:b.value.trim()}; });
-    await save(db.collection("liftlog").doc(date), {date, day, notes:$("#lNotes").value.trim(), done, source:"manual"}, "Session saved");
+    await save(db.collection("liftlog").doc(sessId(date, day)), {date, day, notes:$("#lNotes").value.trim(), done, source:"manual"}, "Session saved");
   });
 }
 async function save(ref, doc, msg){
@@ -858,15 +869,14 @@ function splitSimple(e){ const parts=String(e.name).split(/,\s*/).filter(Boolean
     return one(e.id+"-"+(k+1), nm, dose); }); }
 function wLocal(){ try{ return JSON.parse(localStorage.getItem("fp-w")||"null"); }catch(_){ return null; } }
 function startWorkout(day){
-  const t=todayISO(), cur=S.liftlog[t], loc=wLocal();
-  /* One session row per date: never let a second session replace one already logged today. */
-  if(cur&&cur.day&&cur.day!==day&&cur.exercises&&cur.exercises.some(e=>(e.sets||[]).some(x=>x.done))){ toast(`Today's ${cur.day==="P"?"PT session":"Day "+cur.day} is already logged. Log this one with Quick lift log.`); return; }
+  const t=todayISO(), cur=sessOn(t,day), loc=wLocal(), docId=sessId(t,day);
   if(loc&&loc.date===t&&loc.day===day&&loc.status==="in_progress"&&(!cur||!cur.exercises||String(loc.updatedAt||"")>=String(cur.updatedAt||""))) W=loc;
   else if(cur&&cur.exercises&&cur.day===day) W=JSON.parse(JSON.stringify(cur));
-  else { W={date:t, day, status:"in_progress", startedAt:new Date().toISOString(), pausedMs:0, pausedAt:null, notes:(cur&&cur.notes)||"", source:"app", exercises:[]};
+  else { W={date:t, day, status:"in_progress", startedAt:new Date().toISOString(), pausedMs:0, pausedAt:null, notes:"", source:"app", exercises:[]};
     exFor(day).forEach(e=>{ const simple=!e.scheme||e.block==="Prep"||e.block==="Finish"; if(simple){ W.exercises.push(...splitSimple(e)); return; }
       const ps=parseScheme(e.scheme); W.exercises.push({id:e.id, name:e.name, block:e.block||"", target:[e.load,e.scheme].filter(Boolean).join(" · "), cue:e.cue||"", unit:ps.unit, simple:false, pt:!!e.pt, rest:e.rest||(e.track?120:90), sets:ps.sets.map(r=>({load:e.load, reps:r, done:false}))}); }); }
   if(W.status==="done") W.status="in_progress";
+  W.docId=docId;
   /* Sessions started before the split: break any comma-listed warm-up or cool-down into one checkbox per move. */
   W.exercises=W.exercises.flatMap(e=>{ if(!e.simple||!/,/.test(e.name)) return [e]; const parts=splitSimple(Object.assign({}, S.loads.find(l=>l.id===e.id)||{}, {id:e.id, name:e.name, block:e.block, pt:e.pt}));
     const was=!!(e.sets&&e.sets[0]&&e.sets[0].done); parts.forEach(x=>{ x.sets[0].done=was; }); return parts; });
@@ -936,7 +946,7 @@ function startRest(sec,next){ wCue=false; if(!sec) return stopRest(); wEnd=Date.
 function stopRest(){ clearInterval(wTick); wCue=false; wEnd=0; wNext=""; if(W){ W.restEnd=0; W.restNext=""; } tickRest(); }
 function saveLocalW(){ if(!W) return; W.updatedAt=new Date().toISOString(); try{ localStorage.setItem("fp-w", JSON.stringify(W)); }catch(_){} }
 async function persistWorkout(){ if(!W) return; saveLocalW(); if(!db) return; wLast=W; if(wInFlight){ wDirty=true; return; } wInFlight=true;
-  try{ do{ wDirty=false; const doc=wLast; await db.collection("liftlog").doc(doc.date).set(JSON.parse(JSON.stringify(doc))); }while(wDirty); }catch(err){ failed(err); } finally{ wInFlight=false; } }
+  try{ do{ wDirty=false; const doc=wLast; const row=JSON.parse(JSON.stringify(doc)), id=row.docId||doc.date; delete row.docId; await db.collection("liftlog").doc(id).set(row); }while(wDirty); }catch(err){ failed(err); } finally{ wInFlight=false; } }
 function grabNotes(){ const n=document.getElementById("wNotes"); if(n&&W) W.notes=n.value; }
 function endWorkout(msg){ stopRest(); clearInterval(wClock); W=null; wPeek=false; try{ localStorage.removeItem("fp-w-open"); }catch(_){} closeSheet(); render(); if(msg) toast(msg); }
 async function finishWorkout(){
@@ -950,8 +960,8 @@ async function finishWorkout(){
       await db.collection("loads").doc(e.id).update({history:hist}); } }catch(err){ failed(err); }
   endWorkout("Workout saved. Tonight's review sets your next targets.");
 }
-async function discardWorkout(){ const d=W.date; try{ localStorage.removeItem("fp-w"); }catch(_){}
-  clearTimeout(wInputT); W=null; try{ if(db&&S.liftlog[d]) await db.collection("liftlog").doc(d).delete(); }catch(err){ failed(err); }
+async function discardWorkout(){ const id=W.docId||W.date; try{ localStorage.removeItem("fp-w"); }catch(_){}
+  clearTimeout(wInputT); W=null; try{ if(db&&S.liftlog[id]) await db.collection("liftlog").doc(id).delete(); }catch(err){ failed(err); }
   endWorkout("Workout discarded"); }
 sh.addEventListener("input", e=>{ if(!W||wPeek) return; const f=e.target.dataset.f; if(e.target.id==="wNotes"){ W.notes=e.target.value; saveLocalW(); clearTimeout(wInputT); wInputT=setTimeout(persistWorkout,800); return; } if(!f) return;
   const st=W.exercises[+e.target.dataset.e].sets[+e.target.dataset.s]; st[f]=e.target.value.trim(); st.pr=false; saveLocalW(); clearTimeout(wInputT); wInputT=setTimeout(persistWorkout,800); });
@@ -1242,7 +1252,7 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
   db.collection("plan").onSnapshot(s=>{ byDate(s,"plan"); mark(s); },err);
   db.collection("runs").onSnapshot(s=>{ S.runs=s.docs.map(d=>Object.assign({id:d.id},d.data())); mark(s); },err);
   db.collection("loads").onSnapshot(s=>{ S.loads=s.docs.map(d=>Object.assign({id:d.id},d.data())); mark(s); },err);
-  db.collection("liftlog").onSnapshot(s=>{ byDate(s,"liftlog"); mark(s); },err);
+  db.collection("liftlog").onSnapshot(s=>{ S.liftlog={}; s.docs.forEach(d=>{ const v=d.data(); S.liftlog[d.id]=Object.assign({date:d.id.split("~")[0]}, v); }); mark(s); },err);
   db.collection("daily").onSnapshot(s=>{ byDate(s,"daily"); mark(s); },err);
   db.doc("settings/main").onSnapshot(d=>{ S.settings=d.exists?d.data():{}; queue(); },()=>{});
   db.doc("settings/gear").onSnapshot(d=>{ S.gear=d.exists?d.data():null; queue(); },()=>{});
