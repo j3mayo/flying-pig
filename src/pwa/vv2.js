@@ -56,6 +56,7 @@ for(const scheme of ['light','dark']){
  ok(scheme+': sheet opens with no button focused',await pg.evaluate(()=>document.activeElement&&document.activeElement.id)==='sh');
  await pg.tap('.sh [data-act="newreq"]');await pg.waitForTimeout(200);
  await pg.fill('#reqText','New PT plan from today');await pg.tap('[data-rk="pt"]');await pg.waitForTimeout(150);
+ ok(scheme+': request form says it is reviewed at midnight',(await pg.textContent('.sh-body')).includes('Reviewed tonight at midnight'));
  ok(scheme+': PT toggle selects',await pg.$eval('[data-rk="pt"]',e=>e.getAttribute('aria-pressed'))==='true');
  await pg.setInputFiles('#fileIn',[{name:'pt-plan.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test')},{name:'photo.png',mimeType:'image/png',buffer:fs.readFileSync(path.join(DIR,'../../apple-touch-icon.png'))}]);
  await pg.waitForTimeout(900);ok(scheme+': two attachments uploaded to storage',(await pg.evaluate(()=>__uploads.length))===2&&(await pg.$$('#attList .a')).length===2);

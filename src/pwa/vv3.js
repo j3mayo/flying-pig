@@ -103,15 +103,22 @@ for(const scheme of ['light','dark']){
  const pills=await pg.$$eval('.pillar .ph .pill',x=>x.map(e=>e.textContent));ok(P+'pillar statuses computed from trends',pills[0]==='Improving'&&pills[1]==='Improving'&&pills[3]!=='Building baseline',pills.join(','));
  ok(P+'pillar charts drawn',(await pg.$$('.pillar svg')).length>=3);
  ok(P+'VO2 and steps shown',(await pg.textContent('#view')).includes('VO2 max')&&/9,\d{3}/.test(await pg.textContent('#view')));
+ await pg.tap('[data-act="metric"][data-k="rhr"]');await W(250);ok(P+'tapping a number opens its trend',(await pg.textContent('.sh-nav .ttl'))==='Resting heart rate'&&!!(await pg.$('.sh .chart svg')));
+ await pg.tap('[data-act="mrange"][data-n="30"]');await W(200);ok(P+'trend range switches',(await pg.getAttribute('[data-act="mrange"][data-n="30"]','aria-pressed'))==='true'&&!!(await pg.$('.sh .chart svg')));
+ ok(P+'improving change shown in green',await pg.evaluate(()=>[...document.querySelectorAll('.sh .row .v')].some(e=>e.classList.contains('up'))));
+ await pg.tap('.sh [data-act="close"]');await W(200);
+ await pg.tap('[data-act="metric"][data-k="pace"]');await W(250);ok(P+'easy pace trend opens',(await pg.textContent('.sh-nav .ttl'))==='Easy pace');await pg.tap('.sh [data-act="close"]');await W(200);
  ok(P+'each pillar cites a study',(await pg.$$eval('.pillar .why',x=>x.filter(e=>/\(\w.*\d{4}\)/.test(e.textContent)).length))===4);
  await pg.screenshot({path:out+'-'+scheme+'-health.png',fullPage:true});
  // You: suggestions
  await pg.tap('.tab[data-tab="you"]');await W(250);
  ok(P+'suggested goals listed',(await pg.$$('[data-act="sugadd"]')).length===2);
- await pg.tap('[data-act="sugadd"][data-id="g1"]');await W(300);
+ ok(P+'suggestion rows stay on one line',await pg.$$eval('.sugm .t, .sugm .s',x=>x.length>0&&x.every(e=>e.scrollHeight<=e.clientHeight+4)));
+ await pg.tap('[data-act="sug"][data-id="g1"]');await W(250);ok(P+'tapping a suggestion shows the full reason',(await pg.textContent('.sh-body')).includes('under 7 h'));await pg.tap('.sh [data-act="close"]');await W(200);
+ await pg.tap('#view [data-act="sugadd"][data-id="g1"]');await W(300);
  ok(P+'Add moves a suggestion into Goals',await pg.evaluate(()=>__store['settings/goals'].items.some(i=>i.title==='Average 7.5 h of sleep')&&__store['settings/goalSuggestions'].items.find(i=>i.id==='g1').state==='added'));
- await pg.tap('[data-act="sugno"][data-id="g2"]');await W(300);
- ok(P+'No dismisses and hides it',await pg.evaluate(()=>__store['settings/goalSuggestions'].items.find(i=>i.id==='g2').state==='dismissed')&&(await pg.$$('[data-act="sugadd"]')).length===0);
+ await pg.tap('#view [data-act="sugno"][data-id="g2"]');await W(300);
+ ok(P+'No dismisses and hides it',await pg.evaluate(()=>__store['settings/goalSuggestions'].items.find(i=>i.id==='g2').state==='dismissed')&&(await pg.$$('#view [data-act="sugadd"]')).length===0);
  ok(P+'milestones show date blocks and countdown',(await pg.$$('#view .ms-when')).length>=3);
  await pg.screenshot({path:out+'-'+scheme+'-you.png',fullPage:true});
  // draft survives an app restart

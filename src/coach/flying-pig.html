@@ -6,7 +6,7 @@
   --bg:#000000; --card:#161618; --card-2:#232326; --fill:rgba(120,120,128,.22); --fill-2:rgba(120,120,128,.34);
   --sep:rgba(84,84,88,.55); --label:#FFFFFF; --label-2:rgba(235,235,245,.62); --label-3:rgba(235,235,245,.32);
   --tint:#0A84FF; --run:#30D158; --lift:#0A84FF; --pt:#BF5AF2; --soc:#FF9F0A; --warn:#FF9F0A; --bad:#FF453A; --good:#30D158;
-  --bar:rgba(10,10,12,.88); --on-tint:#FFFFFF;
+  --bar:rgba(10,10,12,.88); --on-tint:#FFFFFF; --rec:#64D2FF; --bod:#FFD60A;
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
   --font-d:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
@@ -56,7 +56,7 @@ button.row:active{background:var(--fill)}
 .chev{width:8px;height:14px;flex:none;color:var(--label-3)}
 .ico{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;flex:none;color:#fff}
 .ico svg{width:18px;height:18px}
-.ico.run{background:var(--run)} .ico.lift{background:var(--lift)} .ico.soc{background:var(--soc)} .ico.rest{background:#636366} .ico.extra{background:var(--pt)} .ico.note{background:#5E5CE6}
+.ico.run{background:var(--run)} .ico.lift{background:var(--lift)} .ico.soc{background:var(--soc)} .ico.rest{background:#636366} .ico.extra{background:var(--pt)} .ico.note{background:#5E5CE6} .ico.rec{background:var(--rec);color:#000} .ico.bod{background:var(--bod);color:#000}
 .btn-big{display:flex;justify-content:center;align-items:center;gap:8px;width:100%;min-height:50px;border-radius:12px;border:0;background:var(--tint);color:var(--on-tint);font-weight:600;font-size:17px;cursor:pointer}
 .btn-big.sec2{background:var(--fill);color:var(--tint)}
 .btn-big:active{opacity:.8}
@@ -270,6 +270,12 @@ button.pv{border:0;background:none;padding:0;text-align:left;font:inherit;font-s
 .plates{display:flex;align-items:center;gap:4px;justify-content:center;min-height:110px}
 .pl{display:grid;place-items:center;width:30px;height:var(--h);border-radius:6px;background:var(--card-2);border:1px solid var(--sep);font:700 12px var(--font);font-variant-numeric:tabular-nums}
 .pltxt{text-align:center;font-size:17px;font-weight:600;margin-top:10px}
+/* Health and You */
+.row .v.up{color:var(--good)} .row .v.down{color:var(--bad)}
+button.num{border:0;background:none;padding:0;text-align:left;color:inherit;cursor:pointer;min-width:0;border-radius:10px}
+button.num:active{background:var(--fill)}
+button.num .k::after{content:" ›";color:var(--label-3)}
+.sugm{border:0;background:none;padding:0;text-align:left;color:inherit;cursor:pointer;min-width:0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -570,7 +576,7 @@ function viewLifts(){
 function viewYou(){
   const t=todayISO();
   const goals=((S.goals&&S.goals.items)||[]).map((it,i)=>`<button class="row" type="button" data-act="goal" data-i="${i}"><span class="ico run">${ICON.heart}</span><div class="main"><div class="t">${esc(it.title)}</div>${it.detail?`<div class="s">${esc(it.detail)}</div>`:""}</div>${it.status?`<span class="pill ${it.status==="on track"?"good":it.status==="watch"?"warn":"tint"}">${esc(it.status)}</span>`:""}${CHEV}</button>`).join("");
-  const sug=sugItems().map(x=>`<div class="row wrapok"><span class="ico note">${ICON.extra}</span><div class="main"><div class="t">${esc(x.title)}</div>${x.why||x.detail?`<div class="s">${esc(x.why||x.detail)}</div>`:""}</div><div class="sugbtns"><button type="button" data-act="sugno" data-id="${esc(x.id)}" aria-label="Dismiss ${esc(x.title)}">No</button><button type="button" class="yes" data-act="sugadd" data-id="${esc(x.id)}">Add</button></div></div>`).join("");
+  const sug=sugItems().map(x=>`<div class="row"><button type="button" class="main sugm" data-act="sug" data-id="${esc(x.id)}"><div class="t">${esc(x.title)}</div>${x.why||x.detail?`<div class="s">${esc(x.why||x.detail)}</div>`:""}</button><div class="sugbtns"><button type="button" data-act="sugno" data-id="${esc(x.id)}" aria-label="Dismiss ${esc(x.title)}">No</button><button type="button" class="yes" data-act="sugadd" data-id="${esc(x.id)}">Add</button></div></div>`).join("");
   const reqs=[...S.requests].sort((a,b)=>String(b.created).localeCompare(String(a.created))).slice(0,5).map(r=>`<button class="row" type="button" data-act="req" data-id="${esc(r.id)}"><span class="ico ${r.kind==="pt"?"extra":"note"}">${r.kind==="pt"?ICON.extra:ICON.note}</span><div class="main"><div class="t">${esc(r.text)}</div><div class="s">${r.kind==="pt"?"PT update":r.kind==="app"?"App change":"Request"} · ${esc(shortDate(String(r.created).slice(0,10)))}</div></div>${statusPill(r.status)}</button>`).join("");
   const ups=[...S.updates].sort((a,b)=>String(b.date+b.id).localeCompare(String(a.date+a.id))).slice(0,5).map(u=>`<button class="row" type="button" data-act="upd" data-id="${esc(u.id)}"><div class="main"><div class="t">${esc(u.title)}</div><div class="s">${esc(u.detail||"")}</div></div><div class="v" style="font-size:15px">${esc(shortDate(u.date))}</div>${CHEV}</button>`).join("");
   const ms=msItems().filter(x=>x.date>=t).slice(0,5);
@@ -710,7 +716,7 @@ function reqForm(pre, keep){
     <textarea class="ta" id="reqText" placeholder="${k==="pt"?"What your PT changed. You can also just attach the photo or PDF.":"Anything you want adjusted: an exercise, a day, how a run felt, a goal."}" aria-label="Request">${esc(reqDraft.text||"")}</textarea>
     ${assets?`<div style="margin-top:12px"><button class="btn-big sec2" type="button" data-act="attach">Attach Photo or PDF</button></div>`:`<div class="foot">Attachments aren't available in this view.</div>`}
     <div class="att" id="attList">${attHtml()}</div>
-    <div class="foot">Reviewed tonight at 8:33 PM. Big changes get flagged for chat.</div></div>`);
+    <div class="foot">Reviewed tonight at midnight. Big changes get flagged for chat.</div></div>`);
 }
 function attHtml(){ return reqDraft.files.map((f,i)=>`<div class="a">${f.uploading?"Uploading…":/^image\//.test(f.type)?`<img src="/_blob/${esc(f.id)}" alt="${esc(f.name)}">`:"PDF<br>"+esc(f.name)}<button type="button" class="x" data-act="attdel" data-i="${i}" aria-label="Remove ${esc(f.name)}">×</button></div>`).join(""); }
 async function toJpeg(file){
@@ -1111,7 +1117,7 @@ function pillarStatus(list){ const s=list.map(x=>x&&x.st).filter(Boolean); if(!s
 const stPill = s => s? `<span class="pill ${s==="improving"?"good":s==="watch"?"warn":"tint"}">${s==="improving"?"Improving":s==="watch"?"Watch":"Steady"}</span>` : '<span class="pill">Building baseline</span>';
 const fmtN=(v,dp)=>v==null||isNaN(v)?"–":(+v).toFixed(dp||0);
 const dTxt=(x,unit,dp)=>{ if(!x||x.cur==null) return "Syncs from your watch"; if(x.diff==null) return "7-day average"; const a=Math.abs(x.diff).toFixed(dp||0); return +a===0?"Steady":`${x.diff>0?"Up":"Down"} ${a}${unit}`; };
-function liftE1(id){ const l=S.loads.find(x=>x.id===id); if(!l||!l.history) return null; const pts=l.history.map(h=>({x:h.date,y:e1rm(+h.load,+h.reps)})).filter(q=>q.y).sort((a,b)=>a.x.localeCompare(b.x)); return pts.length?{name:l.name, pts, last:pts[pts.length-1].y, first:pts[0].y}:null; }
+function liftE1(id){ const l=S.loads.find(x=>x.id===id); if(!l||!l.history) return null; const pts=l.history.map(h=>({x:h.date,y:e1rm(+h.load,+h.reps)})).filter(q=>q.y).sort((a,b)=>a.x.localeCompare(b.x)); return pts.length?{id, name:l.name, pts, last:pts[pts.length-1].y, first:pts[0].y}:null; }
 function viewHealth(){
   const t=todayISO(), st=settings();
   const vo2=trendOf("vo2",true,t), rhr=trendOf("rhr",false,t), hrv=trendOf("hrv",true,t), slp=trendOf("sleep",true,t), wt=trendOf("weight",false,t), stp=trendOf("steps",true,t);
@@ -1121,30 +1127,55 @@ function viewHealth(){
   const lifts=["a1","b1","b3","a3","d3"].map(liftE1).filter(Boolean);
   let strSt=null; if(lifts.some(l=>l.pts.length>=3)){ const ch=mean(lifts.filter(l=>l.pts.length>=3).map(l=>(l.last-l.first)/l.first)); strSt={st:Math.abs(ch)<.02?"steady":ch>0?"improving":"watch"}; }
   const card=(icoCls,ico,title,status,nums,chart,why)=>`<div class="pillar"><div class="ph"><span class="ico ${icoCls}">${ico}</span><h3>${title}</h3>${stPill(status)}</div><div class="nums">${nums}</div>${chart}<div class="why">${why}</div></div>`;
-  const num=(k,v,u,d)=>`<div class="num"><div class="k">${k}</div><div class="v">${v}${v==="–"||!u?"":`<small> ${u}</small>`}</div><div class="d">${d}</div></div>`;
+  const num=(k,v,u,d,key)=>`<${key?`button type="button" data-act="metric" data-k="${esc(key)}"`:"div"} class="num"><div class="k">${k}</div><div class="v">${v}${v==="–"||!u?"":`<small> ${u}</small>`}</div><div class="d">${d}</div></${key?"button":"div"}>`;
   const chart=(pts,label,color,invert,dp)=>pts.length>=2?lineChart(pts,{label, color, invert, empty:"", fmt:v=>(+v).toFixed(dp||0)}):"";
   const rhrS=series("rhr",t), vo2S=series("vo2",t,180), hrvS=rolling(Object.values(S.daily).filter(d=>d.date>=addDays(t,-90)),"hrv",7), wtS=series("weight",t);
   const heart=card("run",ICON.heart,"Heart & Fitness",pillarStatus([vo2,rhr,epSt]),
-    num("VO2 max",fmtN(vo2.cur,1),"",dTxt(vo2,"",1))+num("Resting HR",fmtN(rhr.cur),"bpm",dTxt(rhr," bpm"))+num("Easy pace",ep.length?fmtPace(pace(easy[easy.length-1])):"–","/mi",`At HR under ${st.easyCap}`)+num("Easy runs",easy.length,"","Logged so far"),
+    num("VO2 max",fmtN(vo2.cur,1),"",dTxt(vo2,"",1),"vo2")+num("Resting HR",fmtN(rhr.cur),"bpm",dTxt(rhr," bpm"),"rhr")+num("Easy pace",ep.length?fmtPace(pace(easy[easy.length-1])):"–","/mi",`At HR under ${st.easyCap}`,"pace")+num("Easy runs",easy.length,"","Logged so far"),
     chart(vo2S.length>=2?vo2S:rhrS, vo2S.length>=2?"VO2 max, last 6 months":"Resting heart rate, last 90 days", "var(--run)", vo2S.length<2, vo2S.length>=2?1:0),
     "Higher cardiorespiratory fitness is linked to longer life in large cohort studies (Mandsager et al., JAMA Netw Open, 2018). Lower resting HR over time usually means a fitter heart.");
-  const rec=card("extra",ICON.rest,"Recovery",pillarStatus([hrv,slp]),
-    num("HRV",fmtN(hrv.cur),"ms",dTxt(hrv," ms"))+num("Sleep",fmtN(slp.cur,1),"h",dTxt(slp," h",1)),
-    chart(hrvS,"HRV 7-day average, last 90 days","#5856D6"),
+  const rec=card("rec",ICON.rest,"Recovery",pillarStatus([hrv,slp]),
+    num("HRV",fmtN(hrv.cur),"ms",dTxt(hrv," ms"),"hrv")+num("Sleep",fmtN(slp.cur,1),"h",dTxt(slp," h",1),"sleep"),
+    chart(hrvS,"HRV 7-day average, last 90 days","var(--rec)"),
     "HRV is read as a 7-day average, not day to day (Plews et al., Sports Med, 2013). Adults need 7 or more hours of sleep (Watson et al., Sleep, 2015).");
   const str=card("lift",ICON.lift,"Strength",strSt&&strSt.st?strSt.st:null,
-    lifts.slice(0,4).map(l=>num(l.name.replace(/^Smith /,"").replace(/ bent-over/,""),Math.round(l.last),"lb",(l.last-l.first)>=1?`+${Math.round(l.last-l.first)} since ${shortDate(l.pts[0].x)}`:"Est. max")).join("")||num("Main lifts","–","","Log sets to start"),
+    lifts.slice(0,4).map(l=>num(l.name.replace(/^Smith /,"").replace(/ bent-over/,""),Math.round(l.last),"lb",(l.last-l.first)>=1?`+${Math.round(l.last-l.first)} since ${shortDate(l.pts[0].x)}`:"Est. max","lift:"+l.id)).join("")||num("Main lifts","–","","Log sets to start"),
     lifts.length&&lifts[0].pts.length>=2?lineChart(lifts[0].pts,{label:lifts[0].name+" estimated max",color:"var(--lift)",empty:"",fmt:v=>Math.round(v)}):"",
     "Greater muscle strength is linked to lower mortality in a 17-country cohort (Leong et al., Lancet, 2015). Estimated max uses the Epley formula from your best set.");
-  const body=card("soc",ICON.body,"Body",pillarStatus([wt,stp]),
-    num("Weight",fmtN(wt.cur,1),"lb",dTxt(wt," lb",1))+num("Steps",stp.cur==null?"–":Math.round(stp.cur).toLocaleString(),"/day",dTxt(stp,"",0)),
-    chart(wtS,"Weight, last 90 days","var(--warn)",false,1),
+  const body=card("bod",ICON.body,"Body",pillarStatus([wt,stp]),
+    num("Weight",fmtN(wt.cur,1),"lb",dTxt(wt," lb",1),"weight")+num("Steps",stp.cur==null?"–":Math.round(stp.cur).toLocaleString(),"/day",dTxt(stp,"",0),"steps"),
+    chart(wtS,"Weight, last 90 days","var(--bod)",false,1),
     "Daily steps are linked to lower mortality, leveling off around 8,000 to 10,000 a day for adults under 60 (Paluch et al., Lancet Public Health, 2022).");
   const noWatch=!Object.values(S.daily).some(d=>d.rhr!=null||d.hrv!=null||d.sleep!=null||d.vo2!=null);
   const banner=noWatch?`<div class="callout" style="margin-top:4px"><div class="h">${ICON.heart} Waiting on your watch</div><p>Resting HR, HRV, sleep, VO2 max and steps arrive with the nightly sync from Health Auto Export. Trends appear after about two weeks.</p></div>`:"";
   return `<h1 class="large">Health</h1><div class="sub">Long-term trends from your watch and training</div>${banner}${heart}${rec}${str}${body}
   <div class="foot" style="padding-top:14px">Status compares the last 2 weeks with the 6 weeks before. Trends, not a diagnosis.</div>`;
 }
+
+function sugSheet(id){ const x=((S.goalSug&&S.goalSug.items)||[]).find(i=>i.id===id); if(!x) return;
+  openSheet(navBar(navBtn("close","Close"),"Suggested Goal","")+`<div class="sh-body"><div class="hero"><div class="big" style="font-size:24px">${esc(x.title)}</div></div>
+    ${x.detail?`<div class="cap">Target</div><div class="group"><p class="para">${esc(x.detail)}</p></div>`:""}${x.why?`<div class="sec"><div class="cap">Why</div><div class="group"><p class="para">${esc(x.why)}</p></div></div>`:""}
+    <div class="sec sugbtns" style="justify-content:stretch"><button type="button" data-act="sugno" data-id="${esc(x.id)}" style="flex:1">No thanks</button><button type="button" class="yes" data-act="sugadd" data-id="${esc(x.id)}" style="flex:1">Add Goal</button></div></div>`); }
+/* ---------- one metric over time ---------- */
+const METRIC={vo2:{name:"VO2 max",unit:"",dp:1,col:"var(--run)",up:true}, rhr:{name:"Resting heart rate",unit:"bpm",dp:0,col:"var(--run)",up:false}, hrv:{name:"HRV",unit:"ms",dp:0,col:"var(--rec)",up:true},
+  sleep:{name:"Sleep",unit:"h",dp:1,col:"var(--rec)",up:true}, weight:{name:"Weight",unit:"lb",dp:1,col:"var(--bod)",up:null}, steps:{name:"Steps",unit:"/day",dp:0,col:"var(--bod)",up:true}, pace:{name:"Easy pace",unit:"/mi",dp:0,col:"var(--run)",up:false}};
+let mRange=90;
+function metricPts(k, days){ const t=todayISO(), from=addDays(t,-days);
+  if(k==="pace"){ const cap=settings().easyCap; return [...S.runs].filter(r=>r.date>=from&&r.avgHR&&r.avgHR<=cap+2&&pace(r)).sort((a,b)=>a.date.localeCompare(b.date)).map(r=>({x:r.date,y:pace(r)})); }
+  if(k.startsWith("lift:")){ const l=liftE1(k.slice(5)); return l?l.pts.filter(q=>q.x>=from):[]; }
+  return series(k,t,days); }
+function metricSheet(k){ const lift=k.startsWith("lift:"), L=lift?liftE1(k.slice(5)):null, m=lift?{name:(L&&L.name||"Lift")+" est. max",unit:"lb",dp:0,col:"var(--lift)",up:true}:METRIC[k]; if(!m) return;
+  const pts=metricPts(k,mRange), f=v=>k==="pace"?fmtPace(v):k==="steps"?Math.round(+v).toLocaleString():(+v).toFixed(m.dp), ys=pts.map(q=>q.y);
+  const last7=pts.filter(q=>q.x>addDays(todayISO(),-7)).map(q=>q.y), cur=last7.length?mean(last7):ys.length?ys[ys.length-1]:null;
+  const hi=ys.length?Math.max(...ys):null, lo=ys.length?Math.min(...ys):null, best=m.up===false?lo:hi, ch=ys.length>1?ys[ys.length-1]-ys[0]:null;
+  const good=ch==null||m.up==null||Math.abs(ch)<1e-9?"":((ch>0)===m.up?"up":"down");
+  const row=(a,b,c)=>`<div class="row"><div class="main"><div class="t">${a}</div></div><div class="v ${c||""}">${b}</div></div>`;
+  openSheet(navBar(navBtn("close","Close"),esc(m.name),"")+`<div class="sh-body">
+    <div class="hero"><div class="k" style="font-size:12px;font-weight:700;color:var(--label-2);letter-spacing:.06em;text-transform:uppercase">${last7.length?"7-day average":"Latest"}</div><div class="big" style="font-size:44px">${cur==null?"–":f(cur)}<small style="font-size:18px;color:var(--label-2)"> ${esc(m.unit)}</small></div></div>
+    <div class="seg" role="group" aria-label="Range" style="margin-bottom:12px">${[30,90,180].map(n=>`<button type="button" data-act="mrange" data-n="${n}" data-k="${esc(k)}" aria-pressed="${n===mRange}">${n} days</button>`).join("")}</div>
+    <div class="chart">${pts.length>=2?lineChart(pts.map(q=>({x:q.x,y:k==="pace"?q.y:q.y})),{label:m.name,color:m.col,invert:k==="pace",empty:"",fmt:f,pad:k==="pace"?15:1}):'<div class="empty" style="padding:8px 0">Not enough data in this range yet.</div>'}</div>
+    <div class="sec group">${row("Change in range",ch==null?"–":(ch>0?"+":"")+(k==="pace"?Math.round(ch)+" s":(+ch).toFixed(m.dp)+(m.unit&&m.unit!=="/day"?" "+m.unit:"")),good)}${row(m.up===false?"Lowest":"Highest",best==null?"–":f(best))}${row("Readings",ys.length)}</div>
+    <div class="sec"><div class="cap">Recent</div><div class="group">${pts.slice(-8).reverse().map(q=>`<div class="row"><div class="main"><div class="t">${esc(fmtDate(q.x))}</div></div><div class="v">${f(q.y)}</div></div>`).join("")||'<div class="empty">No readings yet.</div>'}</div></div></div>`); }
 
 /* ---------- goal suggestions ---------- */
 const sugItems=()=>((S.goalSug&&S.goalSug.items)||[]).filter(x=>!x.state);
@@ -1175,7 +1206,7 @@ document.addEventListener("click", e=>{
   if(W && sh.contains(a)){ if(act==="exinfo"){ wPeek=true; exSheet(a.dataset.id); dlg.className="full"; } return; }
   if(act==="close"){ draftClear(); return closeSheet(); }
   if(!db){ toast("Saving isn't available here"); return; }
-  ({logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, rundetail:()=>runDetail(a.dataset.id), notfeeling:notFeelingSheet, nfsend:sendNotFeeling,
+  ({logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, metric:()=>metricSheet(a.dataset.k), mrange:()=>{ mRange=+a.dataset.n||90; metricSheet(a.dataset.k); }, sug:()=>sugSheet(a.dataset.id), rundetail:()=>runDetail(a.dataset.id), notfeeling:notFeelingSheet, nfsend:sendNotFeeling,
     nfpick:()=>{ nfPick=NF[+a.dataset.i]||""; sh.querySelectorAll('[data-act="nfpick"]').forEach(b=>b.setAttribute("aria-pressed", b===a)); }, ptslot:()=>ptSlotSheet(a.dataset.slot), updates:updList, checkins:checkinList, reqsave:saveReq,
     newreq:()=>reqForm(a.dataset.pre), attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),
