@@ -197,7 +197,7 @@ dialog.sheet .sh-nav{padding-top:0;border-radius:14px 14px 0 0}
 .wtool button{border:0;background:var(--fill);color:var(--tint);border-radius:999px;min-height:44px;padding:0 16px;font-weight:600;font-size:15px;cursor:pointer}
 .ex.ss{border-left:3px solid var(--tint);padding-left:10px}
 .ex.ss-mid{margin-bottom:10px}
-.ss-cap{color:var(--tint);padding:2px 4px 8px}
+.ss-cap{color:var(--tint);padding:2px 4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wtool .wh{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wtool button,.sugbtns button,.ex-h .swap,.rest button,.btn-big,.pill,.seg button,.scale button,.del,.lnk,.nav-btn{white-space:nowrap}
 .btn-big{overflow:hidden;text-overflow:ellipsis}
@@ -263,6 +263,13 @@ dialog.sheet .sh-nav{padding-top:0;border-radius:14px 14px 0 0}
 .nfck{color:transparent;width:22px;height:22px;flex:none}.nfck svg{width:20px;height:20px}
 [data-act="nfpick"][aria-pressed="true"] .nfck{color:var(--tint)}
 button.tl-ok{border:0;background:none;padding:0;cursor:pointer;width:44px;height:44px}
+/* workout extras */
+button.pv{border:0;background:none;padding:0;text-align:left;font:inherit;font-size:14px;color:var(--label-2);min-height:36px;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+.sg.pr{background:color-mix(in srgb,#FFD60A 16%,transparent)}.sg.pr .ck{background:#FFD60A;color:#000}
+.exb{display:flex;gap:6px;flex:none}
+.plates{display:flex;align-items:center;gap:4px;justify-content:center;min-height:110px}
+.pl{display:grid;place-items:center;width:30px;height:var(--h);border-radius:6px;background:var(--card-2);border:1px solid var(--sep);font:700 12px var(--font);font-variant-numeric:tabular-nums}
+.pltxt{text-align:center;font-size:17px;font-weight:600;margin-top:10px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -884,14 +891,14 @@ function renderWorkout(){
     const head = (e.block==="Prep"||e.block==="Finish") && e.block!==lastBlock ? `<div class="cap" style="padding-top:4px">${e.block==="Prep"?"Warm-up":"Cool-down"}</div>` : ""; lastBlock=e.block;
     if(e.simple) return `${head}<div class="ex" style="margin-bottom:8px"><div class="sets simple"><div style="min-width:0"><div style="font-weight:600">${esc(e.name)}${e.pt?PTTAG:""}</div>${e.target?`<div class="ex-cue" style="padding:0">${esc(e.target)}</div>`:""}</div><button type="button" class="ck" data-w="tick" data-e="${ei}" data-s="0" aria-pressed="${!!e.sets[0].done}" aria-label="${esc(e.name)} done" style="${e.sets[0].done?"background:var(--good);color:#fff":""}">${CHECK}</button></div></div>`;
     const g=grpOf(e), mem=g?members(ei):[ei], ss=mem.length>1, first=ss&&mem[0]===ei, lastM=ss&&mem[mem.length-1]===ei;
-    const ssHead = first? `<div class="cap ss-cap">Superset ${esc(g)} · alternate sets, rest after each round</div>` : "";
+    const ssHead = first? `<div class="cap ss-cap">Superset ${esc(g)} · rest after each round</div>` : "";
     const prev=prevFor(e.id, W.date);
     const L=S.loads.find(x=>x.id===e.id)||{}; const tl=[L.hold,L.tempo].filter(Boolean).join(" · ");
     const infoId=S.loads.find(x=>x.id===e.id)?e.id:"";
-    return `${head}${ssHead}<div class="ex${ss?" ss":""}${ss&&!lastM?" ss-mid":""}"><div class="ex-h">${infoId?`<button type="button" data-act="exinfo" data-id="${esc(infoId)}"><h3>${esc(e.name)}</h3><span class="info" aria-hidden="true">i</span></button>`:`<h3 style="margin:0;font:600 19px var(--font-d);color:var(--tint)">${esc(e.name)}</h3>`}<button type="button" class="swap" data-w="swap" data-e="${ei}" aria-label="Swap ${esc(e.name)}">Swap</button></div>
+    return `${head}${ssHead}<div class="ex${ss?" ss":""}${ss&&!lastM?" ss-mid":""}"><div class="ex-h">${infoId?`<button type="button" data-act="exinfo" data-id="${esc(infoId)}"><h3>${esc(e.name)}</h3><span class="info" aria-hidden="true">i</span></button>`:`<h3 style="margin:0;font:600 19px var(--font-d);color:var(--tint)">${esc(e.name)}</h3>`}<span class="exb">${barOf(e)?`<button type="button" class="swap" data-w="plates" data-e="${ei}" aria-label="Plates for ${esc(e.name)}">Plates</button>`:""}<button type="button" class="swap" data-w="swap" data-e="${ei}" aria-label="Swap ${esc(e.name)}">Swap</button></span></div>
       <div class="ex-cue">${esc(e.target)}${e.pt?PTTAG:""}${e.swappedFrom?` · instead of ${esc(e.swappedFrom)}`:""}${tl?" · "+esc(tl):""}</div>
       <div class="sets"><div class="sg hd"><span style="text-align:center">Set</span><span>Previous</span><span style="text-align:center">lb</span><span style="text-align:center">Reps${esc(e.unit)}</span><span></span></div>
-      ${e.sets.map((s,si)=>{ const pv=prev[si]||prev[prev.length-1], del=wDel===ei+":"+si; return `<div class="sg ${s.done?"done":""}"><button type="button" class="no" data-w="setmenu" data-e="${ei}" data-s="${si}" aria-label="Set ${si+1} options">${si+1}</button><span class="pv">${pv?esc((pv.load||"")+" × "+(pv.reps||"")):"–"}</span><input inputmode="decimal" data-f="load" data-e="${ei}" data-s="${si}" value="${esc(s.load)}" aria-label="Set ${si+1} weight"><input inputmode="numeric" data-f="reps" data-e="${ei}" data-s="${si}" value="${esc(s.reps)}" aria-label="Set ${si+1} reps">${del?`<button type="button" class="del" data-w="delset" data-e="${ei}" data-s="${si}">Delete</button>`:`<button type="button" class="ck" data-w="tick" data-e="${ei}" data-s="${si}" aria-pressed="${!!s.done}" aria-label="Set ${si+1} done">${CHECK}</button>`}</div>`; }).join("")}
+      ${e.sets.map((s,si)=>{ const pv=prev[si]||prev[prev.length-1], del=wDel===ei+":"+si; return `<div class="sg ${s.done?"done":""}${s.done&&s.pr?" pr":""}"><button type="button" class="no" data-w="setmenu" data-e="${ei}" data-s="${si}" aria-label="Set ${si+1} options">${si+1}</button>${pv?`<button type="button" class="pv" data-w="usepv" data-e="${ei}" data-s="${si}" aria-label="Use last time: ${esc((pv.load||"")+" by "+(pv.reps||""))}">${esc((pv.load||"")+" × "+(pv.reps||""))}</button>`:`<span class="pv">–</span>`}<input inputmode="decimal" data-f="load" data-e="${ei}" data-s="${si}" value="${esc(s.load)}" aria-label="Set ${si+1} weight"><input inputmode="numeric" data-f="reps" data-e="${ei}" data-s="${si}" value="${esc(s.reps)}" aria-label="Set ${si+1} reps">${del?`<button type="button" class="del" data-w="delset" data-e="${ei}" data-s="${si}">Delete</button>`:`<button type="button" class="ck" data-w="tick" data-e="${ei}" data-s="${si}" aria-pressed="${!!s.done}" aria-label="Set ${si+1} done">${CHECK}</button>`}</div>`; }).join("")}
       <button type="button" class="addset" data-w="add" data-e="${ei}">+ Add Set</button></div></div>`; }).join("");
   sh.innerHTML = navBar(`<button class="nav-btn" type="button" data-w="close">Close</button>`, `${W.day==="P"?"PT Session":`Day ${esc(W.day)} · ${esc(LIFT_NAMES[W.day]||"")}`}<small><span id="wEl">${elapsed()}</span> · ${c.d}/${c.n} done</small>`, `<button class="nav-btn" type="button" data-w="finish" style="font-weight:600">Finish</button>`)
     + `<div class="wp"><div style="width:${c.n?Math.round(c.d/c.n*100):0}%"></div></div>`
@@ -956,14 +963,45 @@ sh.addEventListener("click", e=>{
   if(w==="skip"){ stopRest(); saveLocalW(); return; }
   if(w==="swap"){ grabNotes(); swapSheet(+b.dataset.e); return; }
   if(w==="addex"){ grabNotes(); addSheet(); return; }
+  if(w==="usepv"){ const ei=+b.dataset.e, si=+b.dataset.s, ex=W.exercises[ei], pv=prevFor(ex.id, W.date), v=pv[si]||pv[pv.length-1]; if(v){ ex.sets[si].load=String(v.load||""); ex.sets[si].reps=String(v.reps||""); persistWorkout(); renderWorkout(); } return; }
+  if(w==="plates"){ grabNotes(); platesSheet(+b.dataset.e); return; }
   if(w==="setmenu"){ const k=b.dataset.e+":"+b.dataset.s; wDel = wDel===k ? "" : k; renderWorkout(); return; }
   if(w==="delset"){ grabNotes(); const ex=W.exercises[+b.dataset.e]; ex.sets.splice(+b.dataset.s,1); wDel=""; persistWorkout(); renderWorkout(); return; }
   if(w==="add"){ grabNotes(); wDel=""; const ex=W.exercises[+b.dataset.e], last=ex.sets[ex.sets.length-1]||{}; ex.sets.push({load:last.load||"", reps:last.reps||"", done:false}); persistWorkout(); renderWorkout(); return; }
   if(w==="tick"){ grabNotes(); wDel=""; if(W.pausedAt) wResume(); const ei=+b.dataset.e, si=+b.dataset.s, ex=W.exercises[ei], s=ex.sets[si]; s.done=!s.done;
+    s.pr=false; if(s.done&&!ex.simple&&isPR(ex,s)){ s.pr=true; toast(`New best on ${ex.name}: est. max ${Math.round(e1rm(parseFloat(s.load),parseInt(s.reps)))} lb`); }
     let go=null; if(s.done&&!ex.simple){ go=nextAfter(ei,si); if(!go) stopRest(); else if(go.kind==="ss") cueNext(go.label); else startRest(go.sec, go.label); }
     persistWorkout(); renderWorkout(); if(go) scrollToSet(go.e, go.s); }
 });
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden"){ if(W){ grabNotes(); persistWorkout(); } else draftSave(); } });
+
+/* ---------- personal bests and plate math ---------- */
+/* A set is a best when its estimated max beats every earlier logged set of the same exercise (needs at least one earlier set, reps 12 or fewer). */
+function bestBefore(id, date){ const base=String(id).split("~")[0]; let best=0;
+  Object.values(S.liftlog).forEach(l=>{ if(!l.exercises||l.date>=date) return; l.exercises.forEach(x=>{ if(x.id!==id&&x.id!==base) return; x.sets.forEach(st=>{ if(st.done){ const v=e1rm(parseFloat(st.load),parseInt(st.reps)); if(v>best) best=v; } }); }); });
+  const ld=S.loads.find(x=>x.id===base); (ld&&ld.history||[]).forEach(h=>{ if(h.date<date){ const v=e1rm(parseFloat(h.load),parseInt(h.reps)); if(v>best) best=v; } });
+  return best; }
+function isPR(ex, st){ const v=e1rm(parseFloat(st.load),parseInt(st.reps)); if(!v) return false; const b=bestBefore(ex.id, W.date);
+  const today=Math.max(0,...ex.sets.filter(x=>x!==st&&x.done).map(x=>e1rm(parseFloat(x.load),parseInt(x.reps))||0));
+  return b>0 && v>b+0.5 && v>today; }
+const PLATES=[45,35,25,10,5,2.5];
+function plateSplit(total, bar){ let side=(total-bar)/2; if(!(side>0)) return {side:Math.max(0,side), list:[], left:0}; const list=[]; for(const p of PLATES){ while(side>=p-1e-9){ list.push(p); side=Math.round((side-p)*100)/100; } } return {side:(total-bar)/2, list, left:side}; }
+function barOf(e){ const base=S.loads.find(l=>l.id===String(e.id).split("~")[0])||e, pat=patOf(Object.assign({},base,{name:e.name})); if(!pat) return null;
+  const n=String(e.name||"").toLowerCase(), o=(PAT[pat]||[]).find(x=>x[0].toLowerCase()===n)||(PAT[pat]||[]).find(x=>n.includes(x[0].toLowerCase()));
+  if(!o||o[1]!=="bar") return null; return /smith/.test(n)?"smith":"barbell"; }
+function platesOut(){ const tot=parseFloat(($("#plW")||{}).value), bar=+(($("#plBar")||{}).value||0), o=$("#plOut"); if(!o) return;
+  if(!(tot>0)){ o.innerHTML='<div class="empty">Enter a weight</div>'; return; } const x=plateSplit(tot,bar);
+  o.innerHTML = x.list.length? `<div class="plates">${x.list.map(p=>`<span class="pl" style="--h:${Math.round(34+p*0.9)}px">${p}</span>`).join("")}</div><div class="pltxt">Each side: ${x.list.join(" + ")}${x.left>0?` · ${x.left} lb short`:""}</div>` : `<div class="empty">Just the bar${x.left>0?` · ${x.left} lb a side short`:""}</div>`; }
+function platesSheet(ei){ const ex=W.exercises[ei], st=ex.sets.find(x=>!x.done)||ex.sets[0]||{}, kind=barOf(ex); wPeek=true;
+  sh.innerHTML = navBar(`<button class="nav-btn" type="button" data-w="peekclose">Back</button>`, "Plates", "") + `<div class="sh-body">
+    <div class="hero"><div class="big">${esc(ex.name)}</div></div>
+    <div class="group">${frow('<label for="plW">Weight (lb)</label>',`<input id="plW" inputmode="decimal" value="${esc(parseFloat(st.load)||"")}">`)}
+    ${frow('<label for="plBar">The weight is</label>',`<select id="plBar"><option value="0" ${kind==="smith"?"selected":""}>Plates only</option><option value="45" ${kind!=="smith"?"selected":""}>With 45 lb bar</option></select>`)}</div>
+    <div class="sec group" id="plOut" style="padding:16px"></div>
+    <div class="foot">Your Smith machine numbers are plate totals. Plates: 45, 35, 25, 10, 5, 2.5.</div></div>`;
+  platesOut(); sh.scrollTop=0; }
+sh.addEventListener("input", e=>{ if(e.target.id==="plW") platesOut(); });
+sh.addEventListener("change", e=>{ if(e.target.id==="plBar") platesOut(); });
 
 /* ---------- exercise alternatives ---------- */
 /* Each option: [name, equipment, factor vs the pattern reference, scheme override]. Loads scale from your current load. */

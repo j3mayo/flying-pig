@@ -8,6 +8,7 @@ const iso=d=>d.toISOString().slice(0,10);const T=new Date();
 for(let i=0;i<60;i++){const d=new Date(T);d.setDate(d.getDate()-i);const k=iso(d);seed['daily/'+k]=Object.assign({},seed['daily/'+k]||{},{date:k,rhr:52+Math.round(i/10),hrv:68-Math.round(i/8),sleep:+(7.4-(i%3)*.2).toFixed(1),weight:+(182+i*.03).toFixed(1),steps:9000+i*10,vo2:+(46-i*.03).toFixed(1)});}
 seed['settings/ptDaily']={items:[{id:'doorway-am',slot:'am',name:'Doorway stretch',dose:'5 x 30 s',target:1,freq:'Round 1 of 2'}]};
 [['p1','Shrug','35s','3 x 10','A1'],['p2','Banded wall slide','Band','3 x 12','A2']].forEach(([id,n,l,sc,bl],i)=>seed['loads/'+id]={day:'P',order:i+1,block:bl,name:n,load:l,scheme:sc,pt:true,rest:60});
+if(seed['loads/b1'])seed['loads/b1'].history=[...(seed['loads/b1'].history||[]),{date:'2026-10-01',load:150,reps:6,scheme:'150x6'}];
 seed['settings/goalSuggestions']={items:[{id:'g1',title:'Average 7.5 h of sleep',detail:'7-day average',why:'Sleep has been under 7 h on 3 nights this week.'},{id:'g2',title:'Check in 5 days a week',detail:'',why:'Check-ins let the plan adjust to how you feel.'}]};
 const html=fs.readFileSync(path.join(DIR,'app.html'),'utf8');
 const src=fs.readFileSync(path.join(DIR,'vv2.js'),'utf8');const mockSb=eval(src.match(/const mockSb=(`[\s\S]*?`);/)[1].replace('${JSON.stringify(seed)}','__SEED__')).replace('__SEED__',JSON.stringify(seed));
@@ -157,6 +158,25 @@ for(const scheme of ['light','dark']){
  await pg.tap('[data-w="addex"]');await W(250);const adds=await pg.$$('[data-w="addpick"]');ok(P+'add-exercise suggestions offered',adds.length>=2,String(adds.length));
  await pg.fill('#axName','Sled push');await pg.fill('#axLoad','90');await pg.fill('#axScheme','4 x 20');await pg.tap('[data-w="addcustom"]');await W(300);
  ok(P+'custom exercise added',(await pg.textContent('.sh-body')).includes('Sled push'));
+ // last time's numbers fill a set; superset caption on one line
+ const pvb=await pg.$('button.pv');if(pvb){const [pe,ps,txt]=await pvb.evaluate(e=>[e.dataset.e,e.dataset.s,e.textContent]);await pvb.tap();await W(250);
+  const [l,rp]=txt.split(' × ');ok(P+'tapping Previous fills the set',(await pg.inputValue(`.sg input[data-f="load"][data-e="${pe}"][data-s="${ps}"]`))===l&&(await pg.inputValue(`.sg input[data-f="reps"][data-e="${pe}"][data-s="${ps}"]`))===rp,txt);}
+ else ok(P+'tapping Previous fills the set',false,'no previous values shown');
+ ok(P+'superset caption stays on one line',await pg.$$eval('.ss-cap',x=>x.length>0&&x.every(e=>e.getBoundingClientRect().height<32)));
+ // personal best
+ const pe0=await pg.evaluate(()=>+document.querySelector('[data-w="plates"]').dataset.e);
+ const free=await pg.evaluate(e=>{const b=[...document.querySelectorAll(`[data-w="tick"][data-e="${e}"]`)].find(x=>x.getAttribute('aria-pressed')!=='true');return b?+b.dataset.s:-1;},pe0);
+ await pg.fill(`.sg input[data-f="load"][data-e="${pe0}"][data-s="${free}"]`,'500');await pg.fill(`.sg input[data-f="reps"][data-e="${pe0}"][data-s="${free}"]`,'5');await W(100);
+ await pg.tap(`[data-w="tick"][data-e="${pe0}"][data-s="${free}"]`);await W(250);
+ ok(P+'a heavier set is flagged as a new best',(await pg.textContent('.toast')).startsWith('New best')&&!!(await pg.$('.sg.pr')));
+ await pg.tap(`[data-w="tick"][data-e="${pe0}"][data-s="${free}"]`);await W(200);ok(P+'unticking clears the best flag',!(await pg.$('.sg.pr')));
+ // plate calculator
+ await pg.tap(`[data-w="plates"][data-e="${pe0}"]`);await W(250);await pg.fill('#plW','225');await pg.selectOption('#plBar','45');await W(100);
+ ok(P+'plates: 225 with a 45 lb bar is 45 + 45 a side',(await pg.textContent('.pltxt'))==='Each side: 45 + 45');
+ await pg.fill('#plW','185');await pg.selectOption('#plBar','0');await W(100);
+ ok(P+'plates: 185 in plates is 45 + 45 + 2.5 a side',(await pg.textContent('.pltxt'))==='Each side: 45 + 45 + 2.5');
+ await pg.fill('#plW','46');await pg.selectOption('#plBar','45');await W(100);ok(P+'plates: odd remainder is reported',(await pg.textContent('#plOut')).includes('short')||(await pg.textContent('#plOut')).includes('Just the bar'),await pg.textContent('#plOut'));
+ await pg.tap('[data-w="peekclose"]');await W(250);
  // typed set survives a restart, workout reopens by itself
  const inp=await pg.$('.sg input[data-f="load"]');await inp.fill('177');await pg.reload();await W(1200);
  ok(P+'open workout reopens after app restart',await pg.evaluate(()=>document.getElementById('dlg').open&&!!document.querySelector('[data-w="finish"]')));
