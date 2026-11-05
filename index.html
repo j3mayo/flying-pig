@@ -299,6 +299,8 @@ button.num{border:0;background:none;padding:0;text-align:left;color:inherit;curs
 button.num:active{background:var(--fill)}
 button.num .k::after{content:" ›";color:var(--label-3)}
 .sugm{border:0;background:none;padding:0;text-align:left;color:inherit;cursor:pointer;min-width:0}
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
 .auth{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px 16px calc(24px + env(safe-area-inset-bottom,0px))}
@@ -513,6 +515,8 @@ const ICON = {
   note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="8.5"/></svg>'
 };
 function toast(msg){ document.querySelectorAll(".toast").forEach(t=>t.remove()); const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2600); }
+/* Number boxes open the iPhone keyboard on its number side; letters are one tap away but a number-only box can't keep them, so say so. */
+let badT=0; document.addEventListener("input", e=>{ const x=e.target; if(x&&x.type==="number"&&x.validity&&x.validity.badInput&&Date.now()-badT>2500){ badT=Date.now(); toast("Numbers only in this box"); } }, true);
 /* Never redraw under a focused box (it closes the keyboard); redraw once he leaves it. */
 let rqHeld=false;
 const typing=()=>{ const a=document.activeElement; return !!a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.type!=="checkbox"; };
@@ -677,7 +681,7 @@ function ptItemSheet(i){ ptDelArm=null; const items=(S.ptDaily&&S.ptDaily.items)
   openSheet(navBar(navBtn("ptedit","Back"),i==="new"?"New PT Item":"PT Item",navBtn("ptitemsave","Save",`style="font-weight:600" data-i="${esc(i)}"`))+`<div class="sh-body"><div class="group">
     <div class="frow"><input id="piName" maxlength="60" value="${esc(it.name)}" placeholder="Name" aria-label="Name" style="flex:1;text-align:left;color:var(--label);font-weight:600"></div>
     ${frow('<label for="piDose">Dose</label>',`<input id="piDose" value="${esc(it.dose)}" placeholder="10 x 5 s">`)}
-    ${frow('<label for="piTarget">Times a day</label>',`<input id="piTarget" inputmode="numeric" value="${esc(it.target||1)}">`)}
+    ${frow('<label for="piTarget">Times a day</label>',`<input id="piTarget" type="number" min="1" max="10" step="1" value="${esc(it.target||1)}">`)}
     ${frow('<label for="piSlot">When</label>',`<select id="piSlot">${["am","day","pm"].map(k=>`<option value="${k}" ${(it.slot||"pm")===k?"selected":""}>${SLOTNAME[k]}</option>`).join("")}</select>`)}
     ${frow('<label for="piFreq">Note</label>',`<input id="piFreq" value="${esc(it.freq||"")}" placeholder="Light, don't overdo">`)}</div>
     ${i!=="new"?`<div class="sec"><button class="btn-big sec2" type="button" data-act="ptitemdel" data-i="${esc(i)}" style="color:var(--bad)">Remove Item</button></div>`:""}</div>`); }
@@ -800,7 +804,7 @@ function gearSheet(id){
   openSheet(navBar(navBtn("close","Cancel"),id==="new"?"Add Shoes":"Shoes",navBtn("gearsave","Save",`style="font-weight:600" data-id="${esc(id)}"`))+`<div class="sh-body"><div class="group">
     <div class="frow"><input id="gnName" value="${esc(g.name)}" placeholder="Model, e.g. Pegasus 41" aria-label="Shoe model" style="flex:1;text-align:left;color:var(--label)"></div>
     ${frow('<span id="gnSL">Started using</span>',`<input id="gnSince" type="date" value="${esc(g.since)}" aria-labelledby="gnSL">`)}
-    ${frow('<span id="gnBL">Miles already on them</span>',`<input id="gnBase" type="number" inputmode="decimal" value="${esc(g.base||0)}" aria-labelledby="gnBL">`)}
+    ${frow('<span id="gnBL">Miles already on them</span>',`<input id="gnBase" type="number" step="any" min="0" value="${esc(g.base||0)}" aria-labelledby="gnBL">`)}
     ${frow('<span id="gnDL">Default for runs</span>',`<select id="gnDef" aria-labelledby="gnDL"><option value="1" ${g.default?"selected":""}>Yes</option><option value="0" ${g.default?"":"selected"}>No</option></select>`)}
   </div><div class="foot">Watch runs count toward your default pair.</div>
   ${id!=="new"?`<div class="sec"><button class="btn-big sec2" type="button" data-act="gearretire" data-id="${esc(id)}">Retire These Shoes</button></div>`:""}</div>`);
@@ -979,10 +983,10 @@ function runForm(day){
   const t=day||todayISO(), p=S.plan[t];
   openSheet(navBar(navBtn("close","Cancel"),"Add Run",`<button class="nav-btn" type="submit" form="fRun" style="font-weight:600">Save</button>`)+`<div class="sh-body"><form id="fRun"><div class="group">
     ${frow('<span id="l1">Date</span>',`<input id="rDate" type="date" value="${t}" aria-labelledby="l1" required>`)}
-    ${frow('<span id="l2">Distance (mi)</span>',`<input id="rMi" type="number" step="0.01" min="0" inputmode="decimal" placeholder="3.0" aria-labelledby="l2" value="${p&&p.run&&p.run.miles?p.run.miles:""}" required>`)}
+    ${frow('<span id="l2">Distance (mi)</span>',`<input id="rMi" type="number" step="any" min="0" placeholder="3.0" aria-labelledby="l2" value="${p&&p.run&&p.run.miles?p.run.miles:""}" required>`)}
     ${frow('<span id="l3">Time</span>',`<input id="rTime" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="27:00" aria-labelledby="l3" required>`)}
-    ${frow('<span id="l4">Avg heart rate</span>',`<input id="rHR" type="number" inputmode="numeric" placeholder="138" aria-labelledby="l4">`)}
-    ${frow('<span id="l5">Max heart rate</span>',`<input id="rMax" type="number" inputmode="numeric" placeholder="149" aria-labelledby="l5">`)}
+    ${frow('<span id="l4">Avg heart rate</span>',`<input id="rHR" type="number" step="any" min="0" placeholder="138" aria-labelledby="l4">`)}
+    ${frow('<span id="l5">Max heart rate</span>',`<input id="rMax" type="number" step="any" min="0" placeholder="149" aria-labelledby="l5">`)}
     ${frow('<span id="l6">Long run</span>',`<select id="rLong" aria-labelledby="l6"><option value="0">No</option><option value="1" ${p&&p.run&&p.run.long?"selected":""}>Yes</option></select>`)}
     ${gearItems().filter(g=>!g.retired).length?frow('<span id="l7">Shoes</span>',`<select id="rShoe" aria-labelledby="l7">${gearItems().filter(g=>!g.retired).map(g=>`<option value="${esc(g.id)}" ${g.default?"selected":""}>${esc(g.name)}</option>`).join("")}</select>`):""}
   </div><div class="sec group"><div class="frow"><textarea id="rNotes" placeholder="How it felt, anything that hurt" aria-label="Notes"></textarea></div></div></form></div>`);
@@ -994,7 +998,7 @@ function runForm(day){
 }
 function dayForm(){
   const t=todayISO(), c=S.daily[t]||{};
-  const num=(id,lab,v,ph,step)=>frow(`<span id="${id}L">${lab}</span>`,`<input id="${id}" type="number" ${step?`step="${step}"`:""} inputmode="decimal" placeholder="${ph}" aria-labelledby="${id}L" value="${v??""}">`);
+  const num=(id,lab,v,ph,step)=>frow(`<span id="${id}L">${lab}</span>`,`<input id="${id}" type="number" step="any" placeholder="${ph}" aria-labelledby="${id}L" value="${v??""}">`);
   openSheet(navBar(navBtn("close","Cancel"),"Check-in",`<button class="nav-btn" type="submit" form="fDay" style="font-weight:600">Save</button>`)+`<div class="sh-body"><form id="fDay"><div class="group">
     ${frow('<span id="dDL">Date</span>',`<input id="dDate" type="date" value="${t}" aria-labelledby="dDL">`)}
     ${num("dEn","Energy (1–5)",c.energy,"4")}${num("dSo","Leg soreness (0–10)",c.soreness,"2")}${num("dMo","Motivation (1–5)",c.motivation,"4")}
@@ -1107,7 +1111,7 @@ function renderWorkout(){
     return `${head}${ssHead}<div class="ex${ss?" ss":""}${ss&&!lastM?" ss-mid":""}"><div class="ex-h">${infoId?`<button type="button" data-act="exinfo" data-id="${esc(infoId)}"><h3>${esc(e.name)}</h3><span class="info" aria-hidden="true">i</span></button>`:`<h3 style="margin:0;font:600 19px var(--font-d);color:var(--tint)">${esc(e.name)}</h3>`}<span class="exb">${barOf(e)?`<button type="button" class="swap" data-w="plates" data-e="${ei}" aria-label="Plates for ${esc(e.name)}">Plates</button>`:""}<button type="button" class="swap" data-w="swap" data-e="${ei}" aria-label="Swap ${esc(e.name)}">Swap</button></span></div>
       <div class="ex-cue">${esc(e.target)}${e.pt?PTTAG:""}${e.swappedFrom?` · instead of ${esc(e.swappedFrom)}`:""}${tl?" · "+esc(tl):""}</div>
       <div class="sets"><div class="sg hd"><span style="text-align:center">Set</span><span>Previous</span><span style="text-align:center">lb</span><span style="text-align:center">Reps${esc(e.unit)}</span><span></span></div>
-      ${e.sets.map((s,si)=>{ const pv=prev[si]||prev[prev.length-1], del=wDel===ei+":"+si; return `<div class="sg ${s.done?"done":""}${s.done&&s.pr?" pr":""}${del?" deling":""}"><button type="button" class="no" data-w="setmenu" data-e="${ei}" data-s="${si}" aria-label="Set ${si+1} options">${si+1}</button>${pv?`<button type="button" class="pv" data-w="usepv" data-e="${ei}" data-s="${si}" aria-label="Use last time: ${esc((pv.load||"")+" by "+(pv.reps||""))}">${esc((pv.load||"")+" × "+(pv.reps||""))}</button>`:`<span class="pv">–</span>`}<input type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-f="load" data-e="${ei}" data-s="${si}" value="${esc(s.load)}" aria-label="Set ${si+1} weight"><input inputmode="numeric" data-f="reps" data-e="${ei}" data-s="${si}" value="${esc(s.reps)}" aria-label="Set ${si+1} reps">${del?`<button type="button" class="del" data-w="delset" data-e="${ei}" data-s="${si}">Delete</button>`:`<button type="button" class="ck" data-w="tick" data-e="${ei}" data-s="${si}" aria-pressed="${!!s.done}" aria-label="Set ${si+1} done">${CHECK}</button>`}</div>`; }).join("")}
+      ${e.sets.map((s,si)=>{ const pv=prev[si]||prev[prev.length-1], del=wDel===ei+":"+si; return `<div class="sg ${s.done?"done":""}${s.done&&s.pr?" pr":""}${del?" deling":""}"><button type="button" class="no" data-w="setmenu" data-e="${ei}" data-s="${si}" aria-label="Set ${si+1} options">${si+1}</button>${pv?`<button type="button" class="pv" data-w="usepv" data-e="${ei}" data-s="${si}" aria-label="Use last time: ${esc((pv.load||"")+" by "+(pv.reps||""))}">${esc((pv.load||"")+" × "+(pv.reps||""))}</button>`:`<span class="pv">–</span>`}<input type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-f="load" data-e="${ei}" data-s="${si}" value="${esc(s.load)}" aria-label="Set ${si+1} weight"><input type="number" step="any" min="0" data-f="reps" data-e="${ei}" data-s="${si}" value="${esc(s.reps)}" aria-label="Set ${si+1} reps">${del?`<button type="button" class="del" data-w="delset" data-e="${ei}" data-s="${si}">Delete</button>`:`<button type="button" class="ck" data-w="tick" data-e="${ei}" data-s="${si}" aria-pressed="${!!s.done}" aria-label="Set ${si+1} done">${CHECK}</button>`}</div>`; }).join("")}
       <button type="button" class="addset" data-w="add" data-e="${ei}">+ Add Set</button></div></div>`; }).join("");
   sh.innerHTML = navBar(`<button class="nav-btn" type="button" data-w="close">Close</button>`, `${W.day==="P"?"PT Session":`Day ${esc(W.day)} · ${esc(LIFT_NAMES[W.day]||"")}`}<small><span id="wEl">${elapsed()}</span> · ${c.d}/${c.n} done</small>`, `<button class="nav-btn" type="button" data-w="finish" style="font-weight:600">Finish</button>`)
     + `<div class="wp"><div style="width:${c.n?Math.round(c.d/c.n*100):0}%"></div></div>`
@@ -1208,7 +1212,7 @@ function platesOut(){ const tot=parseFloat(($("#plW")||{}).value), bar=+(($("#pl
 function platesSheet(ei){ const ex=W.exercises[ei], st=ex.sets.find(x=>!x.done)||ex.sets[0]||{}, kind=barOf(ex); wPeek=true;
   sh.innerHTML = navBar(`<button class="nav-btn" type="button" data-w="peekclose">Back</button>`, "Plates", "") + `<div class="sh-body">
     <div class="hero"><div class="big">${esc(ex.name)}</div></div>
-    <div class="group">${frow('<label for="plW">Weight (lb)</label>',`<input id="plW" inputmode="decimal" value="${esc(parseFloat(st.load)||"")}">`)}
+    <div class="group">${frow('<label for="plW">Weight (lb)</label>',`<input id="plW" type="number" step="any" min="0" value="${esc(parseFloat(st.load)||"")}">`)}
     ${frow('<label for="plBar">The weight is</label>',`<select id="plBar"><option value="0" ${kind==="smith"?"selected":""}>Plates only</option><option value="45" ${kind==="barbell"?"selected":""}>With 45 lb bar</option><option value="25" ${kind==="ez"?"selected":""}>With 25 lb EZ bar</option></select>`)}</div>
     <div class="sec group" id="plOut" style="padding:16px"></div>
     <div class="foot">Smith machine loads in your plan are plate totals. Plates: 45, 35, 25, 10, 5, 2.5.</div></div>`;
@@ -1459,6 +1463,6 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.05.2136";</script>
+<script>window.FP_VERSION="2026.11.05.2141";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>

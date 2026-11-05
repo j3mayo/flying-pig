@@ -183,7 +183,8 @@ for(const scheme of ['light','dark']){
  await swipe(ex0,c1-1,90);await W(200);ok(P+'swiping right hides it',!(await pg.$('[data-w="delset"]')));
  await swipe(ex0,c1-1,-90);await W(200);await pg.tap('[data-w="delset"]');await W(250);ok(P+'tapping Delete removes the added set',(await cnt())===c1-1);
  // weight boxes take text; redraws wait while typing
- ok(P+'weight boxes use the text keyboard, reps stay numeric',await pg.$$eval('.sg input[data-f="load"]',x=>x.length>0&&x.every(e=>e.type==='text'&&!e.inputMode))&&await pg.$$eval('.sg input[data-f="reps"]',x=>x.every(e=>e.inputMode==='numeric')));
+ ok(P+'weight boxes use the text keyboard, reps stay numeric',await pg.$$eval('.sg input[data-f="load"]',x=>x.length>0&&x.every(e=>e.type==='text'&&!e.inputMode))&&await pg.$$eval('.sg input[data-f="reps"]',x=>x.every(e=>e.type==='number'&&!e.inputMode)));
+ ok(P+'no box locks you to the number pad',await pg.evaluate(()=>!document.documentElement.outerHTML.match(/inputmode="(numeric|decimal)"/)));
  const box=`.sg input[data-f="load"][data-e="${ex0}"][data-s="0"]`;await pg.focus(box);await pg.fill(box,'35/15');
  await pg.evaluate(()=>{const id=Object.keys(__store).find(k=>k.startsWith('plan/'));__rt({eventType:'UPDATE',new:{coll:'plan',id:id.slice(5),data:__store[id]}});});await W(300);
  ok(P+'a sync while typing does not close the keyboard',await pg.evaluate(s=>document.activeElement===document.querySelector(s)&&document.activeElement.value==='35/15',box));
