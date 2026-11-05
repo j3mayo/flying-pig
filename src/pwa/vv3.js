@@ -174,6 +174,20 @@ for(const scheme of ['light','dark']){
  const cnt=async()=>pg.$$eval(`.ex .sg:not(.hd) [data-e="${ex0}"][data-f="load"]`,x=>x.length);
  const c0=await cnt();await pg.tap(`[data-w="setmenu"][data-e="${ex0}"][data-s="1"]`);await W(150);await pg.tap('[data-w="delset"]');await W(250);
  ok(P+'a set can be deleted',(await cnt())===c0-1,c0+' -> '+(await cnt()));
+ // swipe a set left to reveal a red Delete, swipe right to hide it
+ const swipe=async(e,s,dx)=>pg.evaluate(([e,s,dx])=>{const g=document.querySelector(`[data-w="setmenu"][data-e="${e}"][data-s="${s}"]`).closest('.sg');const r=g.getBoundingClientRect(),x=r.left+r.width*0.6,y=r.top+r.height/2;
+  const mk=(type,cx)=>{const tt=new Touch({identifier:1,target:g,clientX:cx,clientY:y});return new TouchEvent(type,{bubbles:true,cancelable:true,touches:type==='touchend'?[]:[tt],changedTouches:[tt]});};
+  g.dispatchEvent(mk('touchstart',x));g.dispatchEvent(mk('touchend',x+dx));},[e,s,dx]);
+ await pg.tap(`[data-w="add"][data-e="${ex0}"]`);await W(200);const c1=await cnt();
+ await swipe(ex0,c1-1,-90);await W(200);ok(P+'swiping an added set left shows a red Delete',!!(await pg.$(`[data-w="delset"][data-e="${ex0}"][data-s="${c1-1}"]`))&&(await pg.$eval('[data-w="delset"]',e=>getComputedStyle(e).backgroundColor))==='rgb(255, 69, 58)');
+ await swipe(ex0,c1-1,90);await W(200);ok(P+'swiping right hides it',!(await pg.$('[data-w="delset"]')));
+ await swipe(ex0,c1-1,-90);await W(200);await pg.tap('[data-w="delset"]');await W(250);ok(P+'tapping Delete removes the added set',(await cnt())===c1-1);
+ // weight boxes take text; redraws wait while typing
+ ok(P+'weight boxes use the text keyboard, reps stay numeric',await pg.$$eval('.sg input[data-f="load"]',x=>x.length>0&&x.every(e=>e.type==='text'&&!e.inputMode))&&await pg.$$eval('.sg input[data-f="reps"]',x=>x.every(e=>e.inputMode==='numeric')));
+ const box=`.sg input[data-f="load"][data-e="${ex0}"][data-s="0"]`;await pg.focus(box);await pg.fill(box,'35/15');
+ await pg.evaluate(()=>{const id=Object.keys(__store).find(k=>k.startsWith('plan/'));__rt({eventType:'UPDATE',new:{coll:'plan',id:id.slice(5),data:__store[id]}});});await W(300);
+ ok(P+'a sync while typing does not close the keyboard',await pg.evaluate(s=>document.activeElement===document.querySelector(s)&&document.activeElement.value==='35/15',box));
+ await pg.evaluate(()=>document.activeElement.blur());await W(300);ok(P+'text weights are kept after leaving the box',(await pg.inputValue(box))==='35/15');
  // swap for today + keep going forward
  await pg.tap(`[data-w="swap"][data-e="${ex0}"]`);await W(250);
  const sw=await pg.$$eval('[data-w="swappick"]',x=>x.map(e=>e.textContent));ok(P+'Swap lists same-job exercises with loads',sw.some(t=>/Barbell back squat.*\d+ · \d+ x \d+/.test(t)),sw.join(' | '));

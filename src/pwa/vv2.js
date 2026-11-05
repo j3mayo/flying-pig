@@ -79,6 +79,10 @@ for(const scheme of ['light','dark']){
  await pg.tap('.tab[data-tab="plan"]');await pg.waitForTimeout(200);await pg.tap('[data-pseg="lifts"]');await pg.waitForTimeout(150);await pg.tap('[data-lday="A"]');await pg.waitForTimeout(150);await pg.tap('[data-act="workout"][data-day="A"]');await pg.waitForTimeout(300);
  await pg.tap('[data-w="tick"] >> nth=1');await pg.waitForTimeout(150);await pg.tap('[data-w="finish"] >> nth=0');await pg.waitForTimeout(500);
  ok(scheme+': workout logged set by set and saved',await pg.evaluate(()=>Object.values(__store).some(v=>v&&v.status==='done'&&v.exercises)));
+ await pg.tap('#logBtn');await pg.waitForTimeout(200);await pg.tap('.sh [data-act="logrun"]');await pg.waitForTimeout(250);
+ ok(scheme+': run time box has a keyboard with a colon',await pg.$eval('#rTime',e=>e.type==='text'&&e.inputMode==='text'));
+ await pg.fill('#rMi','3.1');await pg.fill('#rTime','28.44');await pg.tap('.sh [type="submit"]');await pg.waitForTimeout(400);
+ ok(scheme+': 28.44 is read as 28:44',await pg.evaluate(()=>Object.values(__store).some(v=>v&&v.miles===3.1&&v.timeSec===1724)));
  for(const t of ['today','plan']){await pg.tap(`.tab[data-tab="${t}"]`);await pg.waitForTimeout(200);await pg.screenshot({path:out+'-'+scheme+'-'+t+'.png'});}
  ok(scheme+': no sideways scroll',!(await pg.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth)));
  // offline relaunch uses cache
