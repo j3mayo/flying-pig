@@ -7,6 +7,7 @@ const iso=d=>d.toISOString().slice(0,10);const T=new Date();
 // 60 days of watch data with clear trends so pillar statuses are testable
 for(let i=0;i<60;i++){const d=new Date(T);d.setDate(d.getDate()-i);const k=iso(d);seed['daily/'+k]=Object.assign({},seed['daily/'+k]||{},{date:k,rhr:52+Math.round(i/10),hrv:68-Math.round(i/8),sleep:+(7.4-(i%3)*.2).toFixed(1),weight:+(182+i*.03).toFixed(1),steps:9000+i*10,vo2:+(46-i*.03).toFixed(1)});}
 seed['settings/ptDaily']={items:[{id:'doorway-am',slot:'am',name:'Doorway stretch',dose:'5 x 30 s',target:1,freq:'Round 1 of 2'}]};
+if(seed['loads/a10'])seed['loads/a10'].name='Dead hang 2x30s, doorway stretch 5x30s, thoracic extension 2x8, upper trap and levator stretch 3x30s/side';
 [['p1','Shrug','35s','3 x 10','A1'],['p2','Banded wall slide','Band','3 x 12','A2']].forEach(([id,n,l,sc,bl],i)=>seed['loads/'+id]={day:'P',order:i+1,block:bl,name:n,load:l,scheme:sc,pt:true,rest:60});
 if(seed['loads/b3'])seed['loads/b3'].history=[...(seed['loads/b3'].history||[]),{date:'2026-10-01',load:150,reps:10,scheme:'150x10'}];
 if(seed['loads/b1'])seed['loads/b1'].history=[...(seed['loads/b1'].history||[]),{date:'2026-10-01',load:150,reps:6,scheme:'150x6'}];
@@ -226,6 +227,16 @@ for(const scheme of ['light','dark']){
  await pg.screenshot({path:out+'-'+scheme+'-workout.png'});
  // close pauses
  await pg.tap('[data-w="close"]');await W(300);ok(P+'closing pauses the workout',await pg.evaluate(()=>!!__store['liftlog/'+new Date().toISOString().slice(0,10)]||Object.values(__store).some(v=>v&&v.status==='in_progress'&&v.pausedAt)));
+ // a workout move that is also home PT checks the home item off
+ await pg.tap('.tab[data-tab="plan"]');await W(150);await pg.tap('[data-pseg="lifts"]');await W(150);await pg.tap('[data-lday="A"]');await W(100);await pg.tap('[data-act="workout"][data-day="A"]');await W(400);
+ const dIdx=await pg.evaluate(()=>{const r=[...document.querySelectorAll('.sets.simple')].find(x=>/^Doorway stretch/.test(x.textContent));return r?+r.querySelector('[data-w="tick"]').dataset.e:-1;});
+ const homePT=()=>pg.evaluate(()=>{const k=Object.keys(__store).filter(x=>x.startsWith('daily/')).sort().pop();const d=new Date();const t=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');return ((__store['daily/'+t]||{}).pt||{})['doorway-am']||0;});
+ const ptBefore=await homePT();
+ ok(P+'workout shows which moves count for home PT',dIdx>=0&&(await pg.$$eval('.sets.simple',x=>x.filter(e=>e.textContent.includes('Counts for home PT')).length))===1);
+ await pg.tap(`[data-w="tick"][data-e="${dIdx}"]`);await W(400);ok(P+'checking the doorway stretch in a workout checks it off at home',(await homePT())===Math.min(1,ptBefore+1),ptBefore+' -> '+(await homePT()));
+ await pg.tap(`[data-w="tick"][data-e="${dIdx}"]`);await W(400);ok(P+'unchecking it gives the home item back',(await homePT())===ptBefore);
+ await pg.tap(`[data-w="tick"][data-e="${dIdx}"]`);await W(300);await pg.tap('[data-w="discard"]');await W(150);await pg.tap('[data-w="discard"]');await W(500);
+ ok(P+'discarding the workout gives the home item back',(await homePT())===ptBefore);
  // discard
  await pg.tap('.tab[data-tab="plan"]');await W(150);await pg.tap('[data-pseg="lifts"]');await W(150);await pg.tap('[data-lday="B"]');await W(100);await pg.tap('[data-act="workout"][data-day="B"]');await W(400);
  await pg.tap('[data-w="discard"]');await W(150);ok(P+'discard asks for a second tap',(await pg.textContent('[data-w="discard"]')).includes('Tap again'));

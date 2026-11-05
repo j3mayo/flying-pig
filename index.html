@@ -1083,6 +1083,13 @@ function wPause(){ if(W&&!W.pausedAt){ W.pausedAt=new Date().toISOString(); stop
 function wResume(){ if(W&&W.pausedAt){ W.pausedMs=(W.pausedMs||0)+Math.max(0,Date.now()-new Date(W.pausedAt).getTime()); W.pausedAt=null; } }
 function wCounts(){ let n=0,d=0; W.exercises.forEach(e=>{ e.sets.forEach(s=>{n++; if(s.done)d++;}); }); return {n,d}; }
 const PTTAG='<span class="tagpt">PT</span>';
+/* A workout move that is also on the home PT checklist (chin tuck + head tilt, band pull-apart, doorway stretch, upper trap stretch) checks that item off too, so it isn't done twice. */
+const normPT=x=>String(x||"").toLowerCase().replace(/\+/g," and ").replace(/[^a-z]+/g," ").trim();
+function homeMatch(ex){ if(!ex||!ex.simple) return []; const n=normPT(ex.name); return ((S.ptDaily&&S.ptDaily.items)||[]).filter(it=>{ const k=normPT(it.name); return k&&(n===k||n.startsWith(k+" ")); }); }
+async function ptCredit(ex, on){ const items=homeMatch(ex); if(!items.length||!W) return; const t=W.date, cur=Object.assign({}, S.daily[t]||{}), pt=Object.assign({}, cur.pt||{}); W.ptCredit=W.ptCredit||{};
+  if(on){ const it=items.find(i=>(pt[i.id]||0)<(+i.target||1)); if(!it) return; pt[it.id]=(pt[it.id]||0)+1; W.ptCredit[ex.id]=it.id; }
+  else { const id=W.ptCredit[ex.id]; if(!id) return; pt[id]=Math.max(0,(pt[id]||0)-1); delete W.ptCredit[ex.id]; }
+  try{ await db.collection("daily").doc(t).set(Object.assign(cur,{date:t, pt})); }catch(err){ failed(err); } }
 /* Supersets: exercises whose blocks share a letter (A1 + A2) alternate set by set, with the full rest only after each round. */
 const grpOf=e=>{ if(!e||e.simple) return null; const m=/^([A-Z])\d+$/.exec(String(e.block||"")); return m?m[1]:null; };
 function members(ei){ const g=grpOf(W.exercises[ei]); if(!g) return [ei]; const out=[]; W.exercises.forEach((x,i)=>{ if(grpOf(x)===g) out.push(i); }); return out.length>1?out:[ei]; }
@@ -1102,7 +1109,7 @@ function renderWorkout(){
   let lastBlock=null;
   const body = W.exercises.map((e,ei)=>{
     const head = (e.block==="Prep"||e.block==="Finish") && e.block!==lastBlock ? `<div class="cap" style="padding-top:4px">${e.block==="Prep"?"Warm-up":"Cool-down"}</div>` : ""; lastBlock=e.block;
-    if(e.simple) return `${head}<div class="ex" style="margin-bottom:8px"><div class="sets simple"><div style="min-width:0"><div style="font-weight:600">${esc(e.name)}${e.pt?PTTAG:""}</div>${e.target?`<div class="ex-cue" style="padding:0">${esc(e.target)}</div>`:""}</div><button type="button" class="ck" data-w="tick" data-e="${ei}" data-s="0" aria-pressed="${!!e.sets[0].done}" aria-label="${esc(e.name)} done" style="${e.sets[0].done?"background:var(--good);color:#fff":""}">${CHECK}</button></div></div>`;
+    if(e.simple) return `${head}<div class="ex" style="margin-bottom:8px"><div class="sets simple"><div style="min-width:0"><div style="font-weight:600">${esc(e.name)}${e.pt?PTTAG:""}</div>${e.target||homeMatch(e).length?`<div class="ex-cue" style="padding:0">${esc([e.target, homeMatch(e).length?"Counts for home PT":""].filter(Boolean).join(" · "))}</div>`:""}</div><button type="button" class="ck" data-w="tick" data-e="${ei}" data-s="0" aria-pressed="${!!e.sets[0].done}" aria-label="${esc(e.name)} done" style="${e.sets[0].done?"background:var(--good);color:#fff":""}">${CHECK}</button></div></div>`;
     const g=grpOf(e), mem=g?members(ei):[ei], ss=mem.length>1, first=ss&&mem[0]===ei, lastM=ss&&mem[mem.length-1]===ei;
     const ssHead = first? `<div class="cap ss-cap">Superset ${esc(g)} · rest after each round</div>` : "";
     const prev=prevFor(e.id, W.date);
@@ -1150,7 +1157,9 @@ async function finishWorkout(){
       await db.collection("loads").doc(e.id).update({history:hist}); } }catch(err){ failed(err); }
   endWorkout("Workout saved. Tonight's review sets your next targets.");
 }
-async function discardWorkout(){ const id=W.docId||W.date; try{ localStorage.removeItem("fp-w"); }catch(_){}
+async function discardWorkout(){ const id=W.docId||W.date;
+  if(W.ptCredit){ const t=W.date, cur=Object.assign({}, S.daily[t]||{}), pt=Object.assign({}, cur.pt||{}); Object.values(W.ptCredit).forEach(k=>{ pt[k]=Math.max(0,(pt[k]||0)-1); }); try{ await db.collection("daily").doc(t).set(Object.assign(cur,{date:t, pt})); }catch(_){} }
+  try{ localStorage.removeItem("fp-w"); }catch(_){}
   clearTimeout(wInputT); W=null; try{ if(db&&S.liftlog[id]) await db.collection("liftlog").doc(id).delete(); }catch(err){ failed(err); }
   endWorkout("Workout discarded"); }
 let swX=null, swY=0, swK="";
@@ -1186,6 +1195,7 @@ sh.addEventListener("click", e=>{
   if(w==="delset"){ grabNotes(); const ex=W.exercises[+b.dataset.e]; ex.sets.splice(+b.dataset.s,1); wDel=""; persistWorkout(); renderWorkout(); return; }
   if(w==="add"){ grabNotes(); wDel=""; const ex=W.exercises[+b.dataset.e], last=ex.sets[ex.sets.length-1]||{}; ex.sets.push({load:last.load||"", reps:last.reps||"", done:false}); persistWorkout(); renderWorkout(); return; }
   if(w==="tick"){ grabNotes(); wDel=""; if(W.pausedAt) wResume(); const ei=+b.dataset.e, si=+b.dataset.s, ex=W.exercises[ei], s=ex.sets[si]; s.done=!s.done;
+    if(ex.simple) ptCredit(ex, s.done);
     s.pr=false; if(s.done&&!ex.simple&&isPR(ex,s)){ s.pr=true; toast(`New best on ${ex.name}: est. max ${Math.round(e1rm(parseFloat(s.load),parseInt(s.reps)))} lb`); }
     let go=null; if(s.done&&!ex.simple){ go=nextAfter(ei,si); if(!go) stopRest(); else if(go.kind==="ss") cueNext(go.label); else startRest(go.sec, go.label); }
     persistWorkout(); renderWorkout(); if(go) scrollToSet(go.e, go.s); }
@@ -1463,6 +1473,6 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.05.2141";</script>
+<script>window.FP_VERSION="2026.11.05.2200";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>
