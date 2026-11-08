@@ -10,7 +10,8 @@ A private, single-user training app (running, lifting, physical therapy, health 
   - `src/pwa/port.py`: builds `src/pwa/app.html` (head tags, Supabase script, version stamp). `src/build.sh` copies it to `index.html`.
   - `sw.js`, `manifest.webmanifest`, icons: home-screen app shell.
 - **Data:** Supabase project `jpfvrrdxulcawectrozo`, one table `public.docs(owner, coll, id, data jsonb, version, updated_at)`, key `(coll, id)`. Row level security is owner-only and sign-ups are locked to the one owner. The client uses only the publishable key. Never add secret keys to this repo.
-- **Watch data:** Apple Health exports land in a Google Drive folder ("Flying Pig Export") and are imported nightly.
+- **Watch data:** Health Auto Export posts straight to the `hae` edge function (`supabase/functions/hae`), which writes `daily/*` metrics and `runs/*` and stamps `settings/import`. The Google Drive folder ("Flying Pig Export") is the fallback the nightly coach reads only when that stamp is missing or stale.
+- **Backend:** `supabase/functions/hae` (watch import), `supabase/functions/push` (web push: subscribe, send, VAPID setup), `supabase/migrations/20261108_push_and_import.sql` (keys in Vault, `fp_secret` readers, the `fp_notify` trigger that pushes on a new `notify/*` row or a request reply). Deploy functions with the Supabase connector; apply the migration in the SQL editor. Secrets are generated inside Postgres and never live in this repo.
 - **Nightly coach:** a scheduled cloud task ("Nightly marathon coach review", midnight Eastern) imports watch data, answers in-app requests, keeps the plan written two weeks ahead, adjusts plan and lifting targets by its rules, and can ship small app changes from this repo. It acts on its own and documents every change (see below). Keep the data shape below compatible with it.
 
 ## How changes are documented
@@ -28,7 +29,8 @@ A private, single-user training app (running, lifting, physical therapy, health 
 - `plan/{date}`: day plan `{run:{miles,label,detail,long}, lift:"A".."D", extra (PT session text), soccer, note, phase, week}`.
 - `loads/{id}`: exercises and current targets per lift day (A to D, P = PT session). Blocks sharing a letter (A1, A2) are supersets; `Prep` and `Finish` blocks list several moves in one name separated by commas.
 - `liftlog/{date}` and `liftlog/{date}~{day}`: one row per session; always use each row's `date` and `day` fields.
-- `runs/{id}`, `daily/{date}` (check-in, sleep, HRV, RHR, weight, steps, `pt` home PT counts, `warm` run warm-up checks), `requests/{id}`, `updates/{id}`, `settings/*` (goals, goalSuggestions, ptDaily, milestones, gear, main, coach, program).
+- `runs/{id}`, `daily/{date}` (check-in, sleep, HRV, RHR, weight, steps, `pt` home PT counts, `warm` run warm-up checks), `requests/{id}`, `updates/{id}`, `settings/*` (goals, goalSuggestions, ptDaily, milestones, gear, main, coach, program, import).
+- `notify/{id}` `{title, body, url}`: inserting one sends a push to every `push/{id}` subscription (written by the push function, one per device). The coach writes at most one notify row per night, only when something needs the owner.
 
 ## Design rules
 - Dark theme only. Four tabs: Today, Plan, Health, You. Color only for meaning: run green, lift blue, PT purple, soccer orange, recovery teal, body yellow.

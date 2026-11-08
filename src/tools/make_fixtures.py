@@ -426,6 +426,8 @@ row("settings", "program", {
 row("requests", "r1", {"created": f"{iso(day(-2))}T18:10:00.000Z", "text": "Swap Smith bench for barbell bench going forward. Equipment: full gym.", "kind": "change",
                        "status": "applied", "reply": "Done. Day A now has barbell bench at 135 for 4 x 6; Smith bench history kept.", "resolvedAt": iso(day(-1)), "attachments": []})
 
+row("settings", "import", {"lastAt": (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=2)).isoformat(), "source": "hae", "runsAdded": 1, "runsUpdated": 0, "days": 1})
+
 # ---- write
 for r in rows:
     folder = OUT / r["coll"]

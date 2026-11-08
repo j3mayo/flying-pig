@@ -212,6 +212,7 @@ for(const scheme of ['light','dark']){
  await pg.fill(`.sg input[data-f="load"][data-e="${pe0}"][data-s="${free}"]`,'500');await pg.fill(`.sg input[data-f="reps"][data-e="${pe0}"][data-s="${free}"]`,'5');await W(100);
  await pg.tap(`[data-w="tick"][data-e="${pe0}"][data-s="${free}"]`);await W(250);
  ok(P+'a heavier set is flagged as a new best',(await pg.textContent('.toast')).startsWith('New best')&&!!(await pg.$('.sg.pr')));
+ ok(P+'PR set carries a PR tag on its number',await pg.evaluate(()=>{const n=document.querySelector('.sg.pr .no');return !!n&&getComputedStyle(n,'::after').content.includes('PR');}));
  await pg.tap(`[data-w="tick"][data-e="${pe0}"][data-s="${free}"]`);await W(200);ok(P+'unticking clears the best flag',!(await pg.$('.sg.pr')));
  // plate calculator
  await pg.tap(`[data-w="plates"][data-e="${pe0}"]`);await W(250);await pg.fill('#plW','225');await pg.selectOption('#plBar','45');await W(100);
@@ -241,6 +242,13 @@ for(const scheme of ['light','dark']){
  await pg.tap('.tab[data-tab="plan"]');await W(150);await pg.tap('[data-pseg="lifts"]');await W(150);await pg.tap('[data-lday="B"]');await W(100);await pg.tap('[data-act="workout"][data-day="B"]');await W(400);
  await pg.tap('[data-w="discard"]');await W(150);ok(P+'discard asks for a second tap',(await pg.textContent('[data-w="discard"]')).includes('Tap again'));
  await pg.tap('[data-w="discard"]');await W(400);ok(P+'discard removes the session',await pg.evaluate(()=>!Object.values(__store).some(v=>v&&v.status==='in_progress'&&v.exercises))&&!(await pg.evaluate(()=>document.getElementById('dlg').open)));
+ // Settings: notifications state, watch sync sheet; gym: PR tag
+ await pg.tap('.tab[data-tab="you"]');await W(300);
+ ok(P+'notifications row shows its state',((await pg.textContent('#pushS'))||'').length>3&&(await pg.textContent('#pushS'))!=='Checking…',await pg.textContent('#pushS'));
+ ok(P+'watch sync row shows the last sync',/ago|Not set up/.test(await pg.textContent('[data-act="watchsync"] .s')),await pg.textContent('[data-act="watchsync"] .s'));
+ await pg.tap('[data-act="watchsync"]');await W(400);
+ ok(P+'watch sync sheet gives the setup steps',(await pg.textContent('.sh-nav .ttl'))==='Watch Sync'&&(await pg.textContent('.sh-body')).includes('REST API')&&!!(await pg.$('#haeUrl')));
+ await pg.tap('.sh [data-act="close"]');await W(200);
  // Readiness verdict, lift color split
  await pg.tap('.tab[data-tab="today"]');await W(250);
  ok(P+'Today opens with a readiness verdict',/^(Go as planned|Take it easy today|Rest or very easy|Readiness unknown)$/.test(await pg.textContent('.ready .t')),await pg.textContent('.ready .t'));

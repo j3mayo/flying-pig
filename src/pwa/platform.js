@@ -133,5 +133,26 @@ function showAuth(done){
 }
 async function signOut(){ await sb.auth.signOut(); try{ localStorage.removeItem("fp-cache"); }catch(_){} location.reload(); }
 
-return { ready: !!sb, makeDb, makeAssets, blobSrc, extractText, session, showAuth, signOut, set onUrl(f){ onUrl=f; } };
+/* Push notifications and small helpers */
+async function rpc(name, args){ if(!sb || !sb.rpc) return null; const {data, error} = await sb.rpc(name, args||{}); if(error) throw error; return data; }
+const standalone = () => !!(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+const b64u8 = s => { const b = atob((s + "=".repeat((4 - s.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+async function pushState(){
+  if(!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return "unsupported";
+  if(Notification.permission === "denied") return "denied";
+  try{ const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); return sub ? "on" : "off"; }catch(_){ return "off"; }
+}
+async function pushSubscribe(){
+  const perm = await Notification.requestPermission(); if(perm !== "granted") return "denied";
+  const reg = await navigator.serviceWorker.ready;
+  const r = await fetch(SB_URL + "/functions/v1/push/vapid"); const j = await r.json(); if(!j.publicKey) throw new Error("no key");
+  const sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64u8(j.publicKey)});
+  const s = await session(); if(!s) throw new Error("signed out");
+  const res = await fetch(SB_URL + "/functions/v1/push/subscribe", {method:"POST", headers:{"Content-Type":"application/json", "Authorization":"Bearer " + s.access_token, "apikey":SB_KEY}, body:JSON.stringify({subscription:sub.toJSON(), ua:navigator.userAgent})});
+  if(!res.ok) throw new Error("subscribe failed");
+  return "on";
+}
+async function pushUnsubscribe(){ try{ const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); if(sub) await sub.unsubscribe(); }catch(_){} return "off"; }
+
+return { ready: !!sb, makeDb, makeAssets, blobSrc, extractText, session, showAuth, signOut, rpc, standalone, pushState, pushSubscribe, pushUnsubscribe, set onUrl(f){ onUrl=f; } };
 })();

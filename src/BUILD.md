@@ -7,6 +7,8 @@
 - `src/pwa/vv2.js`, `src/pwa/vv3.js`: Playwright tests at iPhone size, light and dark. Playwright comes from `package.json` (`npm ci`, then `npx playwright install chromium` once).
 - `src/tools/make_fixtures.py`: writes synthetic, non-personal fixtures to `src/export/` (git-ignored). `build.sh` runs it when that folder is missing, so a fresh clone and CI can run the suites. `src/tools/write_fixtures.py` writes real rows exported from Supabase instead, for checking a change against live data.
 
+- `supabase/functions/hae/index.ts`, `supabase/functions/push/index.ts`: Deno edge functions (watch import, web push). Deploy through the Supabase connector or `supabase functions deploy`; both run with `verify_jwt` off and check their own keys. `supabase/migrations/*.sql`: the database side (Vault keys, secret readers, push trigger); apply in the SQL editor.
+
 Setup on a new machine:
 
 ```

@@ -168,6 +168,9 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 .ck{width:44px;height:40px;border-radius:var(--r-ctl);border:0;background:var(--fill);cursor:pointer;display:grid;place-items:center;color:transparent}
 .ck svg{width:18px;height:18px}
 .sg.done .ck{background:var(--good);color:#fff}
+.sg.done .ck svg{animation:pop .28s cubic-bezier(.2,.8,.2,1.2)}
+@keyframes pop{0%{transform:scale(.5);opacity:.4}100%{transform:none;opacity:1}}
+.sg{transition:background-color .2s}
 .addset{width:100%;border:0;background:none;color:var(--tint);font-size:15px;font-weight:600;min-height:44px;border-top:.5px solid var(--sep);cursor:pointer}
 .simple{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 10px 16px;gap:12px}
 .rest{position:sticky;bottom:0;margin:12px -4px 0;background:var(--card-2);border-radius:var(--r-card);box-shadow:0 8px 30px rgba(0,0,0,.35);padding:10px 12px;display:flex;align-items:center;gap:10px}
@@ -304,7 +307,8 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 [data-act="nfpick"][aria-pressed="true"] .nfck{color:var(--tint)}
 button.tl-ok{border:0;background:none;padding:0;cursor:pointer;width:44px;height:44px}
 /* workout extras */
-button.pv{border:0;background:none;padding:0;text-align:left;font:inherit;font-size:15px;color:var(--label-2);min-height:40px;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+button.pv{border:0;background:none;padding:0;text-align:left;font:inherit;font-size:15px;color:var(--label-2);min-height:40px;cursor:pointer;font-variant-numeric:tabular-nums}
+button.pv:active{color:var(--tint)}
 .sg.pr{background:color-mix(in srgb,var(--bod) 16%,transparent)}.sg.pr .ck{background:var(--bod);color:#000}
 .sg.pr .no::after{content:"PR";font-size:9px;font-weight:800;color:var(--bod);display:block;line-height:1;margin-top:-2px}
 .plates{display:flex;align-items:center;gap:4px;justify-content:center;min-height:110px}
@@ -480,14 +484,35 @@ function showAuth(done){
 }
 async function signOut(){ await sb.auth.signOut(); try{ localStorage.removeItem("fp-cache"); }catch(_){} location.reload(); }
 
-return { ready: !!sb, makeDb, makeAssets, blobSrc, extractText, session, showAuth, signOut, set onUrl(f){ onUrl=f; } };
+/* Push notifications and small helpers */
+async function rpc(name, args){ if(!sb || !sb.rpc) return null; const {data, error} = await sb.rpc(name, args||{}); if(error) throw error; return data; }
+const standalone = () => !!(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+const b64u8 = s => { const b = atob((s + "=".repeat((4 - s.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+async function pushState(){
+  if(!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return "unsupported";
+  if(Notification.permission === "denied") return "denied";
+  try{ const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); return sub ? "on" : "off"; }catch(_){ return "off"; }
+}
+async function pushSubscribe(){
+  const perm = await Notification.requestPermission(); if(perm !== "granted") return "denied";
+  const reg = await navigator.serviceWorker.ready;
+  const r = await fetch(SB_URL + "/functions/v1/push/vapid"); const j = await r.json(); if(!j.publicKey) throw new Error("no key");
+  const sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64u8(j.publicKey)});
+  const s = await session(); if(!s) throw new Error("signed out");
+  const res = await fetch(SB_URL + "/functions/v1/push/subscribe", {method:"POST", headers:{"Content-Type":"application/json", "Authorization":"Bearer " + s.access_token, "apikey":SB_KEY}, body:JSON.stringify({subscription:sub.toJSON(), ua:navigator.userAgent})});
+  if(!res.ok) throw new Error("subscribe failed");
+  return "on";
+}
+async function pushUnsubscribe(){ try{ const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); if(sub) await sub.unsubscribe(); }catch(_){} return "off"; }
+
+return { ready: !!sb, makeDb, makeAssets, blobSrc, extractText, session, showAuth, signOut, rpc, standalone, pushState, pushSubscribe, pushUnsubscribe, set onUrl(f){ onUrl=f; } };
 })();
 </script>
 
 <script>
 (function(){
 const RACE = "2027-05-02";
-const S = {plan:{}, runs:[], loads:[], liftlog:{}, daily:{}, settings:{}, goals:null, goalSug:null, ptDaily:null, gear:null, milestones:null, requests:[], updates:[], program:null, loaded:false};
+const S = {plan:{}, runs:[], loads:[], liftlog:{}, daily:{}, settings:{}, goals:null, goalSug:null, ptDaily:null, gear:null, milestones:null, requests:[], updates:[], program:null, import:null, loaded:false};
 let assets = null, reqDraft = {kind:"change", files:[]};
 let db = null, tab = "today", liftDay = null, rq = false;
 try{ const t = localStorage.getItem("fp_tab"); if(t) tab = t; }catch(e){}
@@ -848,10 +873,32 @@ function viewLifts(){
   <div class="sec" style="margin-top:16px"><div class="sec-h"><h2>${liftDay==="P"?"":"Day "+esc(liftDay)+" · "}${esc(LIFT_NAMES[liftDay])}</h2></div><div class="group">${list||'<div class="empty">No exercises saved.</div>'}</div>
     <div style="margin-top:12px"><button class="btn-big" type="button" data-act="workout" data-day="${liftDay}">${liftDay==="P"?"Start PT Session":"Start Day "+liftDay}</button></div></div>
   <div class="sec"><div class="sec-h"><h2>Strength Progress</h2></div><div class="group">${prog||'<div class="empty">Shows once main lifts are logged.</div>'}</div><div class="foot">Estimated max from your best set (Epley formula)</div></div>
-  <div class="sec"><div class="sec-h"><h2>History</h2><button class="lnk" type="button" data-act="loglift">Quick log</button></div><div class="group">${sessions.length? sessions.map(s=>`<div class="row"><div class="main"><div class="t">Day ${esc(s.day)} · ${esc(fmtDate(s.date))}</div>${s.notes?`<div class="s">${esc(s.notes)}</div>`:""}</div>${s.exercises?`<div class="v">${s.exercises.reduce((a,e)=>a+e.sets.filter(x=>x.done).length,0)} sets</div>`:""}${s.status==="in_progress"?'<span class="pill warn">Open</span>':""}</div>`).join(""):'<div class="empty">No sessions yet.</div>'}</div></div>`;
+  <div class="sec"><div class="sec-h"><h2>History</h2><button class="lnk" type="button" data-act="loglift">Quick log</button></div><div class="group">${sessions.length? sessions.map(s=>`<div class="row"><div class="main"><div class="t">Day ${esc(s.day)} · ${esc(fmtDate(s.date))}</div>${s.notes?`<div class="s">${esc(s.notes)}</div>`:""}</div>${s.exercises?`<div class="v">${s.exercises.reduce((a,e)=>a+e.sets.filter(x=>x.done).length,0)} sets</div>`:""}${s.exercises&&s.exercises.some(e=>(e.sets||[]).some(x=>x.pr))?'<span class="pill good">PR</span>':""}${s.status==="in_progress"?'<span class="pill warn">Open</span>':""}</div>`).join(""):'<div class="empty">No sessions yet.</div>'}</div></div>`;
 }
 
 /* ---------- You ---------- */
+function ago(iso){ const ms=Date.now()-new Date(iso).getTime(); if(!(ms>=0)) return ""; const m=Math.round(ms/60000); if(m<60) return m<=1?"just now":m+" min ago"; const h=Math.round(m/60); if(h<36) return h+" h ago"; return Math.round(h/24)+" days ago"; }
+let pushSt="";
+function pushLabel(){ return {on:"On · nightly summary and coach replies", off:"Off · tap to turn on", denied:"Blocked in iOS Settings for Healthspan", unsupported:(FP.standalone&&FP.standalone())?"Needs iOS 16.4 or later":"Add to Home Screen, then turn on"}[pushSt]||"Checking…"; }
+async function refreshPush(){ try{ pushSt=FP.pushState?await FP.pushState():"unsupported"; }catch(_){ pushSt="unsupported"; } const el=$("#pushS"); if(el) el.textContent=pushLabel(); }
+async function pushToggle(){ const st=FP.pushState?await FP.pushState():"unsupported";
+  if(st==="unsupported"){ toast((FP.standalone&&FP.standalone())?"Notifications need iOS 16.4 or later":"Add Healthspan to your Home Screen first"); return; }
+  if(st==="denied"){ toast("Turn notifications on in iOS Settings for Healthspan"); return; }
+  try{ if(st==="on"){ await FP.pushUnsubscribe(); toast("Notifications off"); } else { const r=await FP.pushSubscribe(); toast(r==="on"?"Notifications on":"Notifications not allowed"); } }catch(err){ toast("Couldn't turn on notifications"); }
+  refreshPush(); }
+const syncLabel=()=>S.import&&S.import.lastAt?`Last run from the watch ${ago(S.import.lastAt)}`:"Not set up · tap for the steps";
+async function watchSheet(){
+  openSheet(navBar(navBtn("close","Close"),"Watch Sync","")+`<div class="sh-body"><div class="hero"><div class="big" style="font-size:22px">${S.import&&S.import.lastAt?"Synced "+esc(ago(S.import.lastAt)):"Not set up yet"}</div><div class="foot" style="padding:4px 0 0">${S.import&&S.import.lastAt?`${esc(String(S.import.runsAdded||0))} run${S.import.runsAdded===1?"":"s"} added last time`:"Runs and health numbers arrive minutes after a workout once this is on."}</div></div>
+    <div class="cap">In Health Auto Export</div><div class="group"><ol class="steps">
+    <li>Automations, then New, then REST API.</li>
+    <li>Paste the URL below. Method POST, format JSON.</li>
+    <li>Turn on Workouts. Pick metrics: resting heart rate, heart rate variability, sleep, weight, VO2 max, steps.</li>
+    <li>Period: since last sync. Turn on automatic runs.</li></ol></div>
+    <div class="cap" style="padding-top:18px">Your URL</div><div class="group"><p class="para" id="haeUrl" style="font:13px/1.5 var(--mono);word-break:break-all;color:var(--label-2)">Loading…</p></div>
+    <div style="margin-top:12px"><button class="btn-big sec2" type="button" data-act="copyurl">Copy URL</button></div>
+    <div class="foot">The URL carries your private import key. Until this is set up, the nightly coach imports from your Drive folder.</div></div>`);
+  try{ const k=FP.rpc?await FP.rpc("fp_owner_secret",{n:"hae_key"}):null; const el=$("#haeUrl"); if(el) el.textContent=k?`https://jpfvrrdxulcawectrozo.supabase.co/functions/v1/hae?k=${k}`:"Key not available yet. The database setup step has not run."; }catch(_){ const el=$("#haeUrl"); if(el) el.textContent="Key not available yet. The database setup step has not run."; }
+}
 function viewYou(){
   const t=todayISO();
   const goals=((S.goals&&S.goals.items)||[]).map((it,i)=>`<button class="row" type="button" data-act="goal" data-i="${i}"><span class="ico run">${ICON.heart}</span><div class="main"><div class="t">${esc(it.title)}</div>${it.detail||it.status?`<div class="s">${[it.detail?esc(it.detail):"", it.status?`<span class="st ${it.status==="on track"?"good":it.status==="watch"?"warn":"tint"}">${esc(it.status.charAt(0).toUpperCase()+it.status.slice(1))}</span>`:""].filter(Boolean).join(" · ")}</div>`:""}</div>${CHEV}</button>`).join("");
@@ -868,6 +915,7 @@ function viewYou(){
   <div class="cap caprow"><span>Updates</span><button class="lnk" type="button" data-act="updates">Coach Log</button></div><div class="group">${ups||'<div class="empty">Plan changes and the reasons show here.</div>'}</div></div>
   <div class="sec"><div class="sec-h"><h2>Milestones</h2><button class="lnk" type="button" data-act="ms">Edit</button></div><div class="group">${ms.map(m=>`<div class="row ms-row">${dateBlock(m.date, daysBetween(t,m.date)<=14?"soon":"")}<div class="main"><div class="t">${esc(m.title)}</div><div class="s"><span class="ms-when">${when(m.date)}</span> · ${esc(MON[parse(m.date).getMonth()])} ${parse(m.date).getFullYear()}</div></div></div>`).join("")||'<div class="empty">No upcoming milestones.</div>'}</div></div>
   <div class="sec"><div class="sec-h"><h2>Shoes</h2><button class="lnk" type="button" data-act="gear" data-id="new">Add</button></div><div class="group">${gear.map(g=>{ const mi=shoeMiles(g), pct=Math.min(100,Math.round(mi/500*100)); return `<button class="row" type="button" data-act="gear" data-id="${esc(g.id)}"><div class="main"><div class="t">${esc(g.name)}</div><div class="meter"><div style="width:${pct}%;background:${mi>=400?"var(--warn)":"var(--run)"}"></div></div><div class="s">${g.default?"Default · ":""}since ${g.since?esc(shortDate(g.since)):"?"}</div></div><div class="v" style="color:${mi>=400?"var(--warn)":"var(--label)"};font-weight:600">${mi} mi</div>${CHEV}</button>`; }).join("")||'<button class="row" type="button" data-act="gear" data-id="new"><div class="main"><div class="t" style="color:var(--tint)">Add your running shoes</div><div class="s">Tracks miles so you know when to replace them</div></div></button>'}</div>${gear.length?'<div class="foot">Replace around 300 to 500 mi</div>':""}</div>
+  <div class="sec"><div class="sec-h"><h2>Settings</h2></div><div class="group"><button class="row" type="button" data-act="push"><div class="main"><div class="t">Notifications</div><div class="s" id="pushS">${esc(pushLabel())}</div></div>${CHEV}</button><button class="row" type="button" data-act="watchsync"><div class="main"><div class="t">Watch sync</div><div class="s">${esc(syncLabel())}</div></div>${CHEV}</button></div></div>
   <div class="sec"><div class="sec-h"><h2>History</h2></div><div class="group"><button class="row" type="button" data-act="checkins"><div class="main"><div class="t">All check-ins</div></div>${CHEV}</button><button class="row" type="button" data-act="logday"><div class="main"><div class="t">Add a check-in for another day</div></div>${CHEV}</button></div></div>
   <div class="sec"><div class="group"><button class="row" type="button" data-act="signout"><div class="main"><div class="t" style="color:var(--bad)">Sign Out</div></div></button></div><div class="foot" style="text-align:center;padding-top:10px">Healthspan · version ${esc(window.FP_VERSION||"")}</div></div>`;
 }
@@ -1118,6 +1166,9 @@ async function saveFeel(){
 }
 
 /* ---------- workout mode ---------- */
+let wAlerted=false, wAudio=null;
+function restAlert(){ try{ if(wAudio){ const t=wAudio.currentTime; [0,.18].forEach((o,i)=>{ const osc=wAudio.createOscillator(), g=wAudio.createGain(); osc.type="sine"; osc.frequency.value=i?1046:880; g.gain.setValueAtTime(.0001,t+o); g.gain.exponentialRampToValueAtTime(.22,t+o+.02); g.gain.exponentialRampToValueAtTime(.0001,t+o+.16); osc.connect(g).connect(wAudio.destination); osc.start(t+o); osc.stop(t+o+.18); }); } }catch(_){}
+  if(document.hidden&&"Notification" in window&&Notification.permission==="granted"&&navigator.serviceWorker){ navigator.serviceWorker.getRegistration().then(r=>{ if(r) r.showNotification("Rest over",{body:wNext?"Next: "+wNext:"Next set", tag:"rest", icon:"icon-192.png"}); }).catch(()=>{}); } }
 let wReset=false, wPeek=false, W=null, wLast=null, wTick=null, wEnd=0, wNext="", wInFlight=false, wDirty=false, wInputT=null, wClock=null, wDel="", wDiscard=false;
 function parseScheme(s){ s=String(s||"").trim(); const m=s.match(/^(\d+)\s*x\s*(.+)$/i);
   if(m){ let r=m[2].trim(); const side=/\/side/i.test(r); r=r.replace(/\/side/i,"").trim(); return {sets:Array.from({length:+m[1]},()=>r), unit:side?"/side":""}; }
@@ -1218,11 +1269,12 @@ function renderWorkout(){
 }
 function tickRest(){ const box=document.getElementById("wRest"); if(!box) return; if(!wEnd){ box.hidden=true; return; }
   const left=Math.ceil((wEnd-Date.now())/1000); box.hidden=false;
+  if(left<=0&&!wCue&&!wAlerted){ wAlerted=true; restAlert(); }
   if(wCue){ document.getElementById("wTm").textContent="Go"; document.getElementById("wTm").style.color="var(--tint)"; document.getElementById("wNx").textContent="Superset · now: "+wNext; return; }
   document.getElementById("wTm").textContent = left>0? Math.floor(left/60)+":"+pad(left%60) : "Go";
   document.getElementById("wTm").style.color = left>0? "" : "var(--good)";
   document.getElementById("wNx").textContent = (left>0?"Rest · next: ":"Next: ")+wNext; }
-function startRest(sec,next){ wCue=false; if(!sec) return stopRest(); wEnd=Date.now()+sec*1000; wNext=next; if(W){ W.restEnd=wEnd; W.restNext=next; } clearInterval(wTick); wTick=setInterval(()=>{ tickRest(); if(Date.now()>wEnd+8000) stopRest(); },500); tickRest(); }
+function startRest(sec,next){ wCue=false; wAlerted=false; try{ if(!wAudio&&(window.AudioContext||window.webkitAudioContext)) wAudio=new (window.AudioContext||window.webkitAudioContext)(); }catch(_){} if(!sec) return stopRest(); wEnd=Date.now()+sec*1000; wNext=next; if(W){ W.restEnd=wEnd; W.restNext=next; } clearInterval(wTick); wTick=setInterval(()=>{ tickRest(); if(Date.now()>wEnd+8000) stopRest(); },500); tickRest(); }
 function stopRest(){ clearInterval(wTick); wCue=false; wEnd=0; wNext=""; if(W){ W.restEnd=0; W.restNext=""; } tickRest(); }
 function saveLocalW(){ if(!W) return; W.updatedAt=new Date().toISOString(); try{ localStorage.setItem("fp-w", JSON.stringify(W)); }catch(_){} }
 async function persistWorkout(){ if(!W) return; saveLocalW(); if(!db) return; wLast=W; if(wInFlight){ wDirty=true; return; } wInFlight=true;
@@ -1452,7 +1504,7 @@ function viewHealth(){
     "Daily steps are linked to lower mortality, leveling off around 8,000 to 10,000 a day for adults under 60 (Paluch et al., Lancet Public Health, 2022).");
   const noWatch=!Object.values(S.daily).some(d=>d.rhr!=null||d.hrv!=null||d.sleep!=null||d.vo2!=null);
   const banner=noWatch?`<div class="callout" style="margin-top:4px"><div class="h">${ICON.heart} Waiting on your watch</div><p>Resting HR, HRV, sleep, VO2 max and steps arrive with the nightly sync from Health Auto Export. Trends appear after about two weeks.</p></div>`:"";
-  return `<h1 class="large">Health</h1><div class="sub">Long-term trends from your watch and training</div>${banner}${heart}${rec}${str}${body}
+  return `<h1 class="large">Health</h1><div class="sub">Long-term trends from your watch and training${S.import&&S.import.lastAt?` · synced ${esc(ago(S.import.lastAt))}`:""}</div>${banner}${heart}${rec}${str}${body}
   <div class="foot" style="padding-top:14px">Status compares the last 2 weeks with the 6 weeks before. Trends, not a diagnosis.</div>`;
 }
 
@@ -1512,7 +1564,7 @@ document.addEventListener("click", e=>{
   if(!db){ toast("Saving isn't available here"); return; }
   ({logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, warmup:()=>warmSheet(a.dataset.d), warmtick:()=>warmTick(a.dataset.id), metric:()=>metricSheet(a.dataset.k), mrange:()=>{ mRange=+a.dataset.n||90; metricSheet(a.dataset.k); }, sug:()=>sugSheet(a.dataset.id), rundetail:()=>runDetail(a.dataset.id), notfeeling:notFeelingSheet, nfsend:sendNotFeeling,
     nfpick:()=>{ nfPick=NF[+a.dataset.i]||""; sh.querySelectorAll('[data-act="nfpick"]').forEach(b=>b.setAttribute("aria-pressed", b===a)); }, ptslot:()=>ptSlotSheet(a.dataset.slot), updates:updList, checkins:checkinList, reqsave:saveReq,
-    ready:readySheet, pweek:()=>pweekSheet(a.dataset.w), newreq:()=>reqForm(a.dataset.pre), reqtpl:()=>{ const t=$("#reqText"); if(!t) return; const cur=t.value.trim(); t.value=cur?cur+"\n"+a.dataset.t:a.dataset.t; reqDraft.text=t.value; t.focus(); t.setSelectionRange(t.value.length,t.value.length); }, attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
+    ready:readySheet, push:pushToggle, watchsync:watchSheet, copyurl:()=>{ const t=($("#haeUrl")||{}).textContent||""; if(!/^https:/.test(t)){ toast("No URL yet"); return; } (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("Copied"),()=>toast("Couldn't copy")); }, pweek:()=>pweekSheet(a.dataset.w), newreq:()=>reqForm(a.dataset.pre), reqtpl:()=>{ const t=$("#reqText"); if(!t) return; const cur=t.value.trim(); t.value=cur?cur+"\n"+a.dataset.t:a.dataset.t; reqDraft.text=t.value; t.focus(); t.setSelectionRange(t.value.length,t.value.length); }, attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),
     goal:()=>goalSheet(a.dataset.i), goalsave:()=>saveGoal(a.dataset.i), goaldel:()=>saveGoal(a.dataset.i,true),
     daysheet:()=>daySheet(a.dataset.d), ptedit:()=>{ if(dlg.open) draftClear(); ptEditSheet(); }, ptitem:()=>ptItemSheet(a.dataset.i), ptitemsave:()=>ptItemSave(a.dataset.i), ptitemdel:()=>ptItemSave(a.dataset.i,true), ptex:()=>ptExSheet(a.dataset.id), ptexsave:()=>ptExSave(a.dataset.id), ptexdel:()=>ptExSave(a.dataset.id,true), ptinc:()=>ptInc(a.dataset.id), sugadd:()=>sugAct(a.dataset.id,true), sugno:()=>sugAct(a.dataset.id,false),
@@ -1550,6 +1602,8 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
   db.collection("updates").onSnapshot(s=>{ S.updates=s.docs.map(d=>Object.assign({id:d.id},d.data())); queue(); },()=>{});
   db.doc("settings/goals").onSnapshot(d=>{ S.goals=d.exists?d.data():null; queue(); },()=>{});
   db.doc("settings/program").onSnapshot(d=>{ S.program=d.exists?d.data():null; queue(); },()=>{});
+  db.doc("settings/import").onSnapshot(d=>{ S.import=d.exists?d.data():null; queue(); },()=>{});
+  refreshPush();
   db.doc("settings/goalSuggestions").onSnapshot(d=>{ S.goalSug=d.exists?d.data():null; queue(); },()=>{});
   db.doc("settings/ptDaily").onSnapshot(d=>{ S.ptDaily=d.exists?d.data():null; queue(); },()=>{});
   db.start();
@@ -1557,6 +1611,6 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.08.2144";</script>
+<script>window.FP_VERSION="2026.11.08.2207";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>
