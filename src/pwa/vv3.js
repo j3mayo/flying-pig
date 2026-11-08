@@ -78,7 +78,9 @@ for(const scheme of ['light','dark']){
  // Home PT slot sheet and check-in
  await pg.tap('[data-act="ptslot"][data-slot="am"]');await W(250);
  ok(P+'home PT opens a checklist',(await pg.textContent('.sh-nav .ttl')).startsWith('Morning PT'));
- await pg.tap('.sh [data-act="ptinc"] >> nth=0');await W(400);
+ ok(P+'home PT shows set rows like a workout',(await pg.$$('.sh [data-act="pttick"][data-id="doorway-am"]')).length===5&&(await pg.textContent('.sh .sg.hd')).includes('Hold'));
+ for(let i=0;i<5;i++){ await pg.tap(`.sh [data-act="pttick"][data-id="doorway-am"][data-s="${i}"]`);await W(350); }
+ ok(P+'ticking every set completes the item',(await pg.textContent('.sh-nav .ttl small')).startsWith('1 of')&&await pg.evaluate(t=>{const d=__store['daily/'+t];return d&&d.pt&&d.pt['doorway-am']===1&&d.ptLog&&d.ptLog['doorway-am'].sets.length===5;},tday));
  ok(P+'checking an item updates the sheet',(await pg.textContent('.sh-nav .ttl small')).startsWith('1 of'));
  await pg.tap('.sh [data-act="close"]');await W(200);
  ok(P+'PT ring counts it',(await pg.textContent('.rt >> nth=2')).startsWith('1'));
