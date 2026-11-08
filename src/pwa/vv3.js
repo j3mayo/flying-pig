@@ -261,6 +261,11 @@ for(const scheme of ['light','dark']){
  ok(P+'readiness reads the seeded data as recovered',(await pg.textContent('.ready .t'))==='Go as planned',await pg.textContent('.ready .s'));
  await pg.tap('.ready');await W(250);ok(P+'readiness sheet explains the inputs',(await pg.textContent('.sh-nav .ttl'))==='Readiness'&&(await pg.textContent('.sh-body')).includes('HRV, 7-day average'));await pg.tap('.sh [data-act="close"]');await W(200);
  ok(P+'lifting has its own color, blue stays for interaction',await pg.evaluate(()=>{const cs=getComputedStyle(document.documentElement);return cs.getPropertyValue('--lift').trim()!==cs.getPropertyValue('--tint').trim();}));
+ await pg.evaluate(t=>{const p=__store['plan/'+t];p.soccer=true;__rt({eventType:'UPDATE',new:{coll:'plan',id:t,data:p}});},tday);await W(300);
+ ok(P+'soccer day offers a one-tap Played check',!!(await pg.$('[data-act="soccertick"]')));
+ await pg.tap('[data-act="soccertick"]');await W(300);ok(P+'Played marks soccer done for the day',await pg.evaluate(t=>!!(__store['daily/'+t]&&__store['daily/'+t].soccer),tday)&&!!(await pg.$('.tli.done [data-act="soccertick"]')));
+ await pg.tap('[data-act="soccertick"]');await W(300);ok(P+'tapping the check undoes soccer',await pg.evaluate(t=>!__store['daily/'+t].soccer,tday));
+ await pg.evaluate(t=>{const p=__store['plan/'+t];p.soccer=false;__rt({eventType:'UPDATE',new:{coll:'plan',id:t,data:p}});},tday);await W(300);
  ok(P+'lift button text is dark on the lift color',await pg.evaluate(()=>{const b=document.createElement('button');b.className='go lift';document.body.appendChild(b);const c=getComputedStyle(b).color;b.remove();return c==='rgb(0, 0, 0)';}));
  // Program view, Coach conversation
  await pg.tap('.tab[data-tab="plan"]');await W(200);await pg.tap('[data-pseg="program"]');await W(300);

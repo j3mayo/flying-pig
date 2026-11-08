@@ -653,12 +653,12 @@ function dayItems(d){
   else if(runsOn(d).length){ const rr=runsOn(d); out.push({k:"run", when:"Run", title:`Run · ${r1(sum(rr.map(r=>r.miles)))} mi`, sub:`${fmtPace(pace(tot(rr)))}/mi · HR ${rr[0].avgHR||"–"}`, done:true, runId:rr[0].id}); }
   if(p.extra){ const l=sessOn(d,"P"), n=exFor("P").length;
     out.push({k:"pt", day:"P", when:p.run&&p.run.miles>0?"After the run":"PT session", title:`PT Session${n?" · "+n+" moves":""}`, sub:String(p.extra).replace(/^PT:\s*/,""), done:!!l&&l.status!=="in_progress", open:!!l&&l.status==="in_progress", has:n>0}); }
-  if(p.soccer) out.push({k:"soc", when:"Soccer", title:"Soccer", sub:"Full intensity · counts as a hard day", done:d<todayISO()});
+  if(p.soccer) out.push({k:"soc", when:"Soccer", title:"Soccer", sub:"Full intensity · counts as a hard day", done:!!(S.daily[d]&&S.daily[d].soccer)});
   home("day"); home("pm");
   return out; }
 const KCOL={warm:"var(--run)", run:"var(--run)", lift:"var(--lift)", pt:"var(--pt)", home:"var(--pt)", soc:"var(--soc)"};
 function itemBtn(x, d){ const t=todayISO();
-  if(x.k==="soc") return "";
+  if(x.k==="soc"){ if(x.done) return `<button class="tl-ok" type="button" style="color:${KCOL.soc}" data-act="soccertick" data-d="${d}" aria-label="Soccer played, tap to undo">${CHECK}</button>`; return d<=t?`<button class="go grey" type="button" data-act="soccertick" data-d="${d}">Played</button>`:""; }
   if(x.done&&x.k==="run"&&x.runId) return `<button class="tl-ok" type="button" style="color:${KCOL.run}" data-act="rundetail" data-id="${esc(x.runId)}" aria-label="Run details">${CHECK}</button>`;
   if(x.done&&x.k!=="home") return `<span class="tl-ok" style="color:${KCOL[x.k]}" aria-label="Done">${CHECK}</span>`;
   if(x.k==="warm") return d===t?`<button class="go grey" type="button" data-act="warmup" data-d="${d}">${x.done?"Done":"Open"}</button>`:d>t?`<button class="go grey" type="button" data-act="runsheet" data-d="${d}">View</button>`:"";
@@ -1564,6 +1564,7 @@ document.addEventListener("click", e=>{
   if(!db){ toast("Saving isn't available here"); return; }
   ({logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, warmup:()=>warmSheet(a.dataset.d), warmtick:()=>warmTick(a.dataset.id), metric:()=>metricSheet(a.dataset.k), mrange:()=>{ mRange=+a.dataset.n||90; metricSheet(a.dataset.k); }, sug:()=>sugSheet(a.dataset.id), rundetail:()=>runDetail(a.dataset.id), notfeeling:notFeelingSheet, nfsend:sendNotFeeling,
     nfpick:()=>{ nfPick=NF[+a.dataset.i]||""; sh.querySelectorAll('[data-act="nfpick"]').forEach(b=>b.setAttribute("aria-pressed", b===a)); }, ptslot:()=>ptSlotSheet(a.dataset.slot), updates:updList, checkins:checkinList, reqsave:saveReq,
+    soccertick:async()=>{ const d=a.dataset.d, cur=Object.assign({}, S.daily[d]||{}); const on=!cur.soccer; try{ await db.collection("daily").doc(d).set(Object.assign(cur,{date:d, soccer:on})); toast(on?"Soccer logged":"Soccer unmarked"); }catch(err){ failed(err); } },
     runquick:async()=>{ const d=a.dataset.d, p=S.plan[d]||{}; if(!p.run||!p.run.miles){ toast("No planned run that day"); return; } const def=gearItems().find(g=>g.default&&!g.retired); await save(db.collection("runs").doc(d+"-w"+Math.random().toString(36).slice(2,5)), {date:d, miles:+p.run.miles, timeSec:null, avgHR:null, maxHR:null, long:!!p.run.long, shoe:def?def.id:null, notes:"", source:"manual", awaitWatch:true}, "Marked done. The watch fills in the rest."); closeSheet(); }, ready:readySheet, push:pushToggle, watchsync:watchSheet, copyurl:()=>{ const t=($("#haeUrl")||{}).textContent||""; if(!/^https:/.test(t)){ toast("No URL yet"); return; } (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("Copied"),()=>toast("Couldn't copy")); }, pweek:()=>pweekSheet(a.dataset.w), newreq:()=>reqForm(a.dataset.pre), reqtpl:()=>{ const t=$("#reqText"); if(!t) return; const cur=t.value.trim(); t.value=cur?cur+"\n"+a.dataset.t:a.dataset.t; reqDraft.text=t.value; t.focus(); t.setSelectionRange(t.value.length,t.value.length); }, attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),
     goal:()=>goalSheet(a.dataset.i), goalsave:()=>saveGoal(a.dataset.i), goaldel:()=>saveGoal(a.dataset.i,true),
@@ -1611,6 +1612,6 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.08.2224";</script>
+<script>window.FP_VERSION="2026.11.08.2229";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>

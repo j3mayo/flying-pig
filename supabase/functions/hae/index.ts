@@ -178,17 +178,26 @@ Deno.serve(async (req: Request) => {
     existingRuns.push({ coll: "runs", id, data: { date, miles, startedAt: start } });
   }
   const soccerNotes: Row[] = [];
-  for (const w of soccer) {
-    const date = localDate(String(w.start || ""));
-    const plan = planRows.find((p) => p.id === date);
-    if (plan && (plan.data as Record<string, unknown>).soccer) continue;
-    const have = dailyWrites.find((r) => r.id === date) || existingDaily.find((r) => r.id === date);
-    const cur = (have?.data || { date }) as Record<string, unknown>;
-    if (cur.note) continue;
-    const next = { ...cur, note: "Extra soccer (from the watch)" };
+  const soccerDates = [...new Set(soccer.map((w) => localDate(String(w.start || ""))))].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !dayIds.includes(d));
+  if (soccerDates.length) existingDaily.push(...(await fetchRows("daily", soccerDates)));
+  const putDaily = (date: string, next: Record<string, unknown>) => {
     const idx = dailyWrites.findIndex((r) => r.id === date);
     if (idx >= 0) dailyWrites[idx].data = next;
-    else soccerNotes.push({ coll: "daily", id: date, data: next });
+    else { const j = soccerNotes.findIndex((r) => r.id === date); if (j >= 0) soccerNotes[j].data = next; else soccerNotes.push({ coll: "daily", id: date, data: next }); }
+  };
+  for (const w of soccer) {
+    const date = localDate(String(w.start || ""));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const plan = planRows.find((p) => p.id === date);
+    const have = dailyWrites.find((r) => r.id === date) || soccerNotes.find((r) => r.id === date) || existingDaily.find((r) => r.id === date);
+    const cur = (have?.data || { date }) as Record<string, unknown>;
+    if (plan && (plan.data as Record<string, unknown>).soccer) {
+      if (cur.soccer === true) continue; // already checked off in the app
+      putDaily(date, { ...cur, soccer: true });
+      continue;
+    }
+    if (cur.note) continue;
+    putDaily(date, { ...cur, note: "Extra soccer (from the watch)" });
   }
 
   const summary = {
