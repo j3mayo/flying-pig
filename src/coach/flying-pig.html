@@ -220,6 +220,7 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 .sugbtns{display:flex;gap:8px;flex:none}
 .sugbtns button{border:0;border-radius:var(--r-pill);min-height:44px;padding:0 16px;font-weight:600;font-size:15px;cursor:pointer;background:var(--fill);color:var(--label-2)}
 .sugbtns button.yes{background:var(--tint);color:var(--on-tint)}
+@media (max-width:380px){.row.sug{flex-wrap:wrap;row-gap:8px}.row.sug .sugm{flex:1 1 100%}.row.sug .sugbtns{width:100%;justify-content:flex-end}}
 .ptc{flex:none;min-width:52px;height:36px;border-radius:var(--r-pill);border:0;background:var(--fill);color:var(--label-2);font:600 15px var(--font);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;white-space:nowrap}
 .ptc.full{background:var(--good);color:#fff}.ptc svg{width:18px;height:18px}
 .ms-when{font-size:13px;color:var(--label-2);white-space:nowrap}
@@ -566,7 +567,7 @@ function feelCard(t){
     <div><div class="q">Energy <span>low → high</span></div>${sc("energy",[1,2,3,4,5])}</div>
     <div><div class="q">Leg soreness <span>none → very</span></div>${sc("soreness",[0,2,4,6,8,10])}</div>
     <div><div class="q">Motivation <span>low → high</span></div>${sc("motivation",[1,2,3,4,5])}</div>
-    <button class="btn-big" type="button" data-act="feelsave">Save</button></div>`;
+    </div>`;
 }
 
 /* ---------- Runs ---------- */
@@ -622,7 +623,7 @@ function viewLifts(){
 function viewYou(){
   const t=todayISO();
   const goals=((S.goals&&S.goals.items)||[]).map((it,i)=>`<button class="row" type="button" data-act="goal" data-i="${i}"><span class="ico run">${ICON.heart}</span><div class="main"><div class="t">${esc(it.title)}</div>${it.detail||it.status?`<div class="s">${[it.detail?esc(it.detail):"", it.status?`<span class="st ${it.status==="on track"?"good":it.status==="watch"?"warn":"tint"}">${esc(it.status.charAt(0).toUpperCase()+it.status.slice(1))}</span>`:""].filter(Boolean).join(" · ")}</div>`:""}</div>${CHEV}</button>`).join("");
-  const sug=sugItems().map(x=>`<div class="row"><button type="button" class="main sugm" data-act="sug" data-id="${esc(x.id)}"><div class="t">${esc(x.title)}</div>${x.why||x.detail?`<div class="s">${esc(x.why||x.detail)}</div>`:""}</button><div class="sugbtns"><button type="button" data-act="sugno" data-id="${esc(x.id)}" aria-label="Dismiss ${esc(x.title)}">No</button><button type="button" class="yes" data-act="sugadd" data-id="${esc(x.id)}">Add</button></div></div>`).join("");
+  const sug=sugItems().map(x=>`<div class="row sug"><button type="button" class="main sugm" data-act="sug" data-id="${esc(x.id)}"><div class="t">${esc(x.title)}</div>${x.why||x.detail?`<div class="s">${esc(x.why||x.detail)}</div>`:""}</button><div class="sugbtns"><button type="button" data-act="sugno" data-id="${esc(x.id)}" aria-label="Dismiss ${esc(x.title)}">No</button><button type="button" class="yes" data-act="sugadd" data-id="${esc(x.id)}">Add</button></div></div>`).join("");
   const reqs=[...S.requests].sort((a,b)=>String(b.created).localeCompare(String(a.created))).slice(0,5).map(r=>`<button class="row" type="button" data-act="req" data-id="${esc(r.id)}"><span class="ico ${r.kind==="pt"?"extra":"note"}">${r.kind==="pt"?ICON.extra:ICON.note}</span><div class="main"><div class="t">${esc(r.text)}</div><div class="s">${r.kind==="pt"?"PT update":r.kind==="app"?"App change":"Request"} · ${esc(shortDate(String(r.created).slice(0,10)))} · ${statusText(r.status)}</div></div>${CHEV}</button>`).join("");
   const ups=[...S.updates].sort((a,b)=>String(b.date+b.id).localeCompare(String(a.date+a.id))).slice(0,5).map(u=>`<button class="row" type="button" data-act="upd" data-id="${esc(u.id)}"><div class="main"><div class="t">${esc(u.title)}</div><div class="s">${esc(shortDate(u.date))}${u.detail?" · "+esc(u.detail):""}</div></div>${CHEV}</button>`).join("");
   const ms=msItems().filter(x=>x.date>=t).slice(0,5);

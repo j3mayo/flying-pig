@@ -77,7 +77,7 @@ for(const scheme of ['light','dark']){
  await pg.tap('.sh [data-act="close"]');await W(200);
  ok(P+'PT ring counts it',(await pg.textContent('.rt >> nth=2')).startsWith('1'));
  const hadDot=!!(await pg.$('.ckin i'));await pg.evaluate(t=>{const d=__store['daily/'+t];if(d){delete d.energy;}},tday);
- await pg.tap('.ckin');await W(250);for(const [k,vv] of [['energy',4],['soreness',2],['motivation',4]]) await pg.tap(`.sh [data-feel="${k}"][data-v="${vv}"]`);
+ await pg.tap('.ckin');await W(250);ok(P+'check-in sheet has one Save button',(await pg.$$('.sh [data-act="feelsave"]')).length===1&&!!(await pg.$('.sh-nav [data-act="feelsave"]')));for(const [k,vv] of [['energy',4],['soreness',2],['motivation',4]]) await pg.tap(`.sh [data-feel="${k}"][data-v="${vv}"]`);
  await pg.tap('.sh-nav [data-act="feelsave"]');await W(400);
  ok(P+'check-in saves and the dot goes away',await pg.evaluate(t=>__store['daily/'+t].energy===4,tday)&&!(await pg.$('.ckin i'))&&(await pg.textContent('.ckin')).includes('Checked in'));
  // Plan: schedule, runs, lifts
