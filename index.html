@@ -68,6 +68,7 @@ button.row:active{background:var(--fill)}
 .ta{width:100%;min-height:150px;border:0;background:var(--card);border-radius:var(--r-card);padding:14px 16px;font:17px/1.4 var(--font);color:var(--label);resize:vertical}
 .row .s{font-size:15px;color:var(--label-2);margin-top:1px}
 .row .v{color:var(--label-2);font-size:17px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.group.reply .para{font-size:17px;line-height:1.45}.group.reply.wait .para{color:var(--label-2)}
 .st{font-weight:600}.st.good{color:var(--good)}.st.warn{color:var(--warn)}.st.bad{color:var(--bad)}.st.tint{color:var(--tint)}
 .chev{width:8px;height:14px;flex:none;color:var(--label-3)}
 .ico{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex:none;color:#fff}
@@ -477,14 +478,14 @@ return { ready: !!sb, makeDb, makeAssets, blobSrc, extractText, session, showAut
 <script>
 (function(){
 const RACE = "2027-05-02";
-const S = {plan:{}, runs:[], loads:[], liftlog:{}, daily:{}, settings:{}, goals:null, goalSug:null, ptDaily:null, gear:null, milestones:null, requests:[], updates:[], loaded:false};
+const S = {plan:{}, runs:[], loads:[], liftlog:{}, daily:{}, settings:{}, goals:null, goalSug:null, ptDaily:null, gear:null, milestones:null, requests:[], updates:[], program:null, loaded:false};
 let assets = null, reqDraft = {kind:"change", files:[]};
 let db = null, tab = "today", liftDay = null, rq = false;
 try{ const t = localStorage.getItem("fp_tab"); if(t) tab = t; }catch(e){}
 const TABS = ["today","plan","health","you"];
 /* Runs and Lifts now live inside Plan; old links and saved tabs open that segment. */
 let planSeg = "schedule";
-function routeTab(h){ if(h==="runs"||h==="lifts"){ planSeg=h; return "plan"; } return TABS.includes(h)?h:null; }
+function routeTab(h){ if(h==="runs"||h==="lifts"||h==="program"){ planSeg=h; return "plan"; } return TABS.includes(h)?h:null; }
 tab = routeTab(tab)||"today";
 { const h=routeTab(location.hash.slice(1)); if(h) tab=h; }
 
@@ -752,9 +753,36 @@ function viewRuns(){
 
 /* ---------- Plan: schedule, runs and lifts in one tab ---------- */
 function viewPlan(){
-  const segs=[["schedule","Schedule"],["runs","Runs"],["lifts","Lifts"]];
-  const inner = planSeg==="runs"?viewRuns():planSeg==="lifts"?viewLifts():viewSchedule();
+  const segs=[["schedule","Schedule"],["runs","Runs"],["lifts","Lifts"],["program","Program"]];
+  const inner = planSeg==="runs"?viewRuns():planSeg==="lifts"?viewLifts():planSeg==="program"?viewProgram():viewSchedule();
   return `<h1 class="large">Plan</h1><div class="seg" role="group" aria-label="Plan view" style="margin:8px 0 16px">${segs.map(([k,l])=>`<button type="button" data-pseg="${k}" aria-pressed="${k===planSeg}">${l}</button>`).join("")}</div>${inner}`; }
+function planWeeks(){ const ks=Object.keys(S.plan).sort(); if(!ks.length) return []; const out=[]; let m=monday(ks[0]); const end=monday(ks[ks.length-1]);
+  while(m<=end){ const days=Array.from({length:7},(_,i)=>S.plan[addDays(m,i)]||{}); out.push({start:m, miles:r1(sum(days.map(p=>p.run?+p.run.miles||0:0))), long:Math.max(0,...days.map(p=>p.run&&p.run.long?+p.run.miles||0:0)), lifts:days.filter(p=>p.lift).length, week:(days.find(p=>p.week!=null)||{}).week}); m=addDays(m,7); } return out; }
+function weekRan(m){ return r1(sum(weekRuns(m).map(r=>+r.miles||0))); }
+function progRow(w, label, sub){ const mt=monday(todayISO()), now=w.start===mt, past=w.start<mt, ran=(past||now)?weekRan(w.start):null;
+  return `<button class="row" type="button" data-act="pweek" data-w="${esc(w.start)}"><div class="main"><div class="t">${esc(label)}${now?' <span class="st tint">Now</span>':""}</div><div class="s">${esc(sub)}</div></div><div class="v">${ran!=null?`<span class="${ran>=(+w.miles||0)*0.9?"up":""}">${ran}</span> / `:""}${esc(String(w.miles))} mi</div>${CHEV}</button>`; }
+function viewProgram(){
+  const pr=S.program, pw=planWeeks();
+  if(!pr){ const soFar=pw.map(w=>progRow(w, `Week of ${shortDate(w.start)}`, [w.long?`Long run ${w.long} mi`:"", w.lifts?`${w.lifts} lifts`:""].filter(Boolean).join(" · ")||"Rest week")).join("");
+    return `<div class="callout"><div class="h">${ICON.run} Your program</div><p>Phase 1 ramps to 25 miles a week by Dec 21 with every run easy, then the 18-week Advanced Marathoning plan starts Dec 28. The coach writes the full week-by-week program at its next midnight review, and it shows here.</p></div>
+    <div class="sec"><div class="sec-h"><h2>Planned So Far</h2></div><div class="group">${soFar||'<div class="empty">No weeks planned yet.</div>'}</div><div class="foot">Ran / planned miles for past and current weeks. Tap a week for its days.</div></div>`; }
+  const p1=pr.phase1||{}, p2=pr.phase2||{};
+  const rows1=((p1.weeks)||[]).map(w=>progRow(w, `Week of ${shortDate(w.start)}`, w.long?`Long run ${w.long} mi`:"Easy week")).join("");
+  const key=w=>(w.sessions||[]).filter(s=>/threshold|long|marathon|vo2|interval|tempo|race/i.test(s.type||"")).map(s=>s.type).join(" · ");
+  const rows2=((p2.weeks)||[]).map(w=>progRow(w, `Week ${w.n!=null?w.n+" · ":""}${shortDate(w.start)}`, key(w)||(w.long?`Long run ${w.long} mi`:""))).join("");
+  const tail=(pr.tailoring||[]).map(x=>`<li>${esc(x)}</li>`).join("");
+  return `<div class="sec" style="margin-top:0"><div class="sec-h"><h2>Phase 1 · Ramp-up</h2><span class="ms-when">${esc(shortDate(p1.start||"2026-10-24"))} to ${esc(shortDate(p1.end||"2026-12-27"))}</span></div><div class="group">${rows1||'<div class="empty">No weeks yet.</div>'}</div><div class="foot">Every run easy by heart rate. Ran / planned miles for past and current weeks.</div></div>
+  <div class="sec"><div class="sec-h"><h2>Phase 2 · Book Plan</h2><span class="ms-when">${esc(shortDate(p2.start||"2026-12-28"))} to ${esc(shortDate(p2.race||RACE))}</span></div><div class="group">${rows2||'<div class="empty">The coach adds the Phase 2 weeks before Dec 28.</div>'}</div><div class="foot">Pfitzinger and Douglas, Advanced Marathoning, 18 weeks up to 55 miles. Key sessions listed; tap a week for all of them.</div></div>
+  ${tail?`<div class="sec"><div class="sec-h"><h2>Tailored For You</h2></div><div class="group"><ul class="steps">${tail}</ul></div></div>`:""}
+  <div class="foot" style="padding-top:14px">Updated ${esc(pr.updated?fmtDate(pr.updated):"by the coach")}.</div>`;
+}
+function pweekSheet(m){ const days=Array.from({length:7},(_,i)=>addDays(m,i)), have=days.some(d=>S.plan[d]);
+  let body="";
+  if(have){ body=`<div class="group">${days.map(d=>{ const p=S.plan[d]; if(!p) return `<div class="day" style="cursor:default">${dateBlock(d)}<div class="acts"><div class="act rest"><span class="dot" style="background:var(--fill-2)"></span><span class="tx">Not planned yet</span></div></div></div>`; const a=actsFor(d);
+      return `<button class="day" type="button" data-act="daysheet" data-d="${d}">${dateBlock(d)}<div class="acts">${a.length?a.map(x=>`<div class="act"><span class="dot" style="background:${x.c}"></span><span class="tx">${esc(x.t)}</span></div>`).join(""):`<div class="act rest"><span class="dot" style="background:var(--fill-2)"></span><span class="tx">Rest</span></div>`}</div>${CHEV}</button>`; }).join("")}</div>`; }
+  else { const w=[...(((S.program||{}).phase1||{}).weeks||[]), ...(((S.program||{}).phase2||{}).weeks||[])].find(x=>x.start===m); const ss=(w&&w.sessions)||[];
+    body=ss.length?`<div class="group">${ss.map(s=>`<div class="row"><div class="main"><div class="t">${esc(s.type||"Run")}${s.day?` <span class="st">${esc(s.day)}</span>`:""}</div>${s.detail?`<div class="s">${esc(s.detail)}</div>`:""}</div>${s.miles!=null?`<div class="v">${esc(String(s.miles))} mi</div>`:""}</div>`).join("")}</div><div class="foot">The coach writes these into days about two weeks ahead.</div>`:`<div class="group"><div class="empty">${w?`${w.miles} miles planned, long run ${w.long||"?"} mi. Days are written about two weeks ahead.`:"Nothing planned for this week yet."}</div></div>`; }
+  openSheet(navBar(navBtn("close","Close"),`Week of ${esc(shortDate(m))}`,"")+`<div class="sh-body">${body}</div>`); }
 function viewSchedule(){ const t=todayISO(), keys=Object.keys(S.plan).sort(), start=keys[0]||t, p=S.plan[t]||{};
   const total=Math.max(1,daysBetween(start,RACE)), pct=Math.max(0,Math.min(100,Math.round(daysBetween(start,t)/total*100)));
   return `<div class="prog"><div class="ph"><span>${p.week!=null?"Week "+esc(p.week):"Plan"}${p.phase?" · "+esc(String(p.phase).replace(/^Phase \d+\s*[:·-]?\s*/i,"")):""}</span><span>${pct}% · race in ${daysBetween(t,RACE)} days</span></div><div class="bar"><i style="width:${pct}%"></i></div><div class="ends"><span>${esc(shortDate(start))}</span><span>${esc(shortDate(RACE))}</span></div></div>
@@ -794,7 +822,7 @@ function viewYou(){
   <div class="sec" style="margin-top:0"><div class="sec-h"><h2>Goals</h2><button class="lnk" type="button" data-act="goal" data-i="new">Add</button></div><div class="group">${goals||'<div class="empty">No goals yet.</div>'}</div>
   ${sug?`<div class="cap caprow"><span>Suggested</span></div><div class="group">${sug}</div><div class="foot">From the weekly review of your progress</div>`:""}</div>
   <div class="sec"><div class="sec-h"><h2>Coach</h2><button class="lnk" type="button" data-act="newreq">New Request</button></div><div class="group">${reqs||`<button class="row" type="button" data-act="newreq"><span class="ico note">${ICON.note}</span><div class="main"><div class="t" style="color:var(--tint)">Ask for a change or add a PT update</div></div></button>`}</div>
-  <div class="cap caprow"><span>Updates</span>${S.updates.length>5?`<button class="lnk" type="button" data-act="updates">See All</button>`:""}</div><div class="group">${ups||'<div class="empty">Plan changes and the reasons show here.</div>'}</div></div>
+  <div class="cap caprow"><span>Updates</span><button class="lnk" type="button" data-act="updates">Coach Log</button></div><div class="group">${ups||'<div class="empty">Plan changes and the reasons show here.</div>'}</div></div>
   <div class="sec"><div class="sec-h"><h2>Milestones</h2><button class="lnk" type="button" data-act="ms">Edit</button></div><div class="group">${ms.map(m=>`<div class="row ms-row">${dateBlock(m.date, daysBetween(t,m.date)<=14?"soon":"")}<div class="main"><div class="t">${esc(m.title)}</div><div class="s"><span class="ms-when">${when(m.date)}</span> · ${esc(MON[parse(m.date).getMonth()])} ${parse(m.date).getFullYear()}</div></div></div>`).join("")||'<div class="empty">No upcoming milestones.</div>'}</div></div>
   <div class="sec"><div class="sec-h"><h2>Shoes</h2><button class="lnk" type="button" data-act="gear" data-id="new">Add</button></div><div class="group">${gear.map(g=>{ const mi=shoeMiles(g), pct=Math.min(100,Math.round(mi/500*100)); return `<button class="row" type="button" data-act="gear" data-id="${esc(g.id)}"><div class="main"><div class="t">${esc(g.name)}</div><div class="meter"><div style="width:${pct}%;background:${mi>=400?"var(--warn)":"var(--run)"}"></div></div><div class="s">${g.default?"Default · ":""}since ${g.since?esc(shortDate(g.since)):"?"}</div></div><div class="v" style="color:${mi>=400?"var(--warn)":"var(--label)"};font-weight:600">${mi} mi</div>${CHEV}</button>`; }).join("")||'<button class="row" type="button" data-act="gear" data-id="new"><div class="main"><div class="t" style="color:var(--tint)">Add your running shoes</div><div class="s">Tracks miles so you know when to replace them</div></div></button>'}</div>${gear.length?'<div class="foot">Replace around 300 to 500 mi</div>':""}</div>
   <div class="sec"><div class="sec-h"><h2>History</h2></div><div class="group"><button class="row" type="button" data-act="checkins"><div class="main"><div class="t">All check-ins</div></div>${CHEV}</button><button class="row" type="button" data-act="logday"><div class="main"><div class="t">Add a check-in for another day</div></div>${CHEV}</button></div></div>
@@ -918,11 +946,13 @@ function notFeelingSheet(){ nfPick="";
     <div class="foot">Tonight's review eases the next few days. Pain that's sharp or getting worse: stop and see your PT or a doctor.</div></div>`); }
 async function sendNotFeeling(){ if(!nfPick){ toast("Pick what's going on"); return; } const note=(($("#nfNote")||{}).value||"").trim();
   await save(db.collection("requests").doc(Date.now().toString(36)), {created:new Date().toISOString(), kind:"change", status:"pending", reply:"", attachments:[], text:`Not feeling 100% (${nfPick})${note?": "+note:""}. Please ease the next few days.`}, "Sent. Tonight's review adjusts your plan."); }
+const REQ_TPL=[["Swap an exercise","Swap [exercise] for [new exercise] going forward. Equipment: [what I have]."],["Traveling","Traveling [dates] with [hotel gym / no gym / treadmill]. Please adjust those days."],["Move a session","Move [session] from [day] to [day] this week."],["Felt hard or easy","[Session] on [day] felt [too hard / too easy]: [what happened]."],["Something hurts","[Where] hurts when I [movement], since [when]. Pain [1 to 10]."]];
 function reqForm(pre, keep){
   if(!keep) reqDraft={kind:"change", files:[], text:pre||""};
   const k=reqDraft.kind;
   openSheet(navBar(navBtn("close","Cancel"),"New Request",navBtn("reqsave","Send",'style="font-weight:600"'))+`<div class="sh-body">
     <div class="seg" role="group" aria-label="Request type" style="margin-bottom:14px"><button type="button" data-rk="change" aria-pressed="${k==="change"}">Training</button><button type="button" data-rk="pt" aria-pressed="${k==="pt"}">PT update</button><button type="button" data-rk="app" aria-pressed="${k==="app"}">App</button></div>
+    ${k==="change"?`<div class="chips" style="margin-bottom:12px">${REQ_TPL.map(([l,t])=>`<button type="button" class="chip" data-act="reqtpl" data-t="${esc(t)}">${esc(l)}</button>`).join("")}</div>`:""}
     <textarea class="ta" id="reqText" placeholder="${k==="pt"?"What your PT changed. You can also just attach the photo or PDF.":"Anything you want adjusted: an exercise, a day, how a run felt, a goal."}" aria-label="Request">${esc(reqDraft.text||"")}</textarea>
     ${assets?`<div style="margin-top:12px"><button class="btn-big sec2" type="button" data-act="attach">Attach Photo or PDF</button></div>`:`<div class="foot">Attachments aren't available in this view.</div>`}
     <div class="att" id="attList">${attHtml()}</div>
@@ -960,14 +990,15 @@ async function saveReq(){
   reqDraft={kind:"change", files:[]};
 }
 function reqSheet(id){ const r=S.requests.find(x=>x.id===id); if(!r) return;
-  openSheet(navBar(navBtn("close","Close"),r.kind==="pt"?"PT Update":r.kind==="app"?"App Change":"Change Request","")+`<div class="sh-body"><div class="hero">${statusPill(r.status)}</div>
-    <div class="cap">You sent · ${esc(shortDate(String(r.created).slice(0,10)))}</div><div class="group"><p class="para">${esc(r.text)}</p></div>
+  openSheet(navBar(navBtn("close","Close"),r.kind==="pt"?"PT Update":r.kind==="app"?"App Change":"Change Request","")+`<div class="sh-body"><div class="cap caprow" style="padding-top:0"><span>Coach${r.resolvedAt?" · "+esc(shortDate(r.resolvedAt)):""}</span>${statusPill(r.status)}</div><div class="group reply${r.reply?"":" wait"}"><p class="para">${esc(r.reply||"Waiting for tonight's review. The coach reads requests at midnight Eastern and replies here.")}</p></div>
+    <div class="cap caprow"><span>You · ${esc(shortDate(String(r.created).slice(0,10)))}</span></div><div class="group"><p class="para">${esc(r.text)}</p></div>
     ${(r.attachments||[]).length?`<div class="att">${r.attachments.map(a=>/^image\//.test(a.type)?`<a class="a" href="${esc(FP.blobSrc(a.id))}" target="_blank" rel="noopener"><img src="${esc(FP.blobSrc(a.id))}" alt="${esc(a.name)}"></a>`:`<a class="a" href="${esc(FP.blobSrc(a.id))}" target="_blank" rel="noopener" style="color:var(--tint)">Open PDF<br>${esc(a.name)}</a>`).join("")}</div>`:""}
-    <div class="sec"><div class="cap">Response</div><div class="group"><p class="para" style="${r.reply?"":"color:var(--label-2)"}">${esc(r.reply||"Waiting for tonight's review.")}</p></div></div></div>`); }
+    </div>`); }
 function updSheet(id){ const u=S.updates.find(x=>x.id===id); if(!u) return;
   openSheet(navBar(navBtn("close","Close"),"Update","")+`<div class="sh-body"><div class="hero"><div class="big" style="font-size:22px">${esc(u.title)}</div><div class="pills"><span class="pill">${esc(fmtDate(u.date))}</span></div></div><div class="cap">Why</div><div class="group"><p class="para">${esc(u.detail||"")}</p></div></div>`); }
 function updList(){ const ups=[...S.updates].sort((a,b)=>String(b.date+b.id).localeCompare(String(a.date+a.id)));
-  openSheet(navBar(navBtn("close","Close"),"Updates","")+`<div class="sh-body"><div class="group">${ups.map(u=>`<button class="row" type="button" data-act="upd" data-id="${esc(u.id)}"><div class="main"><div class="t">${esc(u.title)}</div></div><div class="v">${esc(shortDate(u.date))}</div>${CHEV}</button>`).join("")||'<div class="empty">No updates yet.</div>'}</div></div>`); }
+  const byDay=[]; ups.forEach(u=>{ const g=byDay.find(x=>x.d===u.date); if(g) g.items.push(u); else byDay.push({d:u.date, items:[u]}); });
+  openSheet(navBar(navBtn("close","Close"),"Coach Log","")+`<div class="sh-body">${byDay.map((g,i)=>`<div class="cap"${i?' style="padding-top:18px"':""}>${esc(fmtDate(g.d))}</div><div class="group">${g.items.map(u=>`<button class="row" type="button" data-act="upd" data-id="${esc(u.id)}"><div class="main"><div class="t">${esc(u.title)}</div>${u.detail?`<div class="s">${esc(u.detail)}</div>`:""}</div>${CHEV}</button>`).join("")}</div>`).join("")||'<div class="group"><div class="empty">No updates yet. The coach logs every change it makes here.</div></div>'}<div class="foot" style="padding-top:14px">One entry per change the coach makes, with the reason.</div></div>`); }
 function checkinList(){ const ds=Object.values(S.daily).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,30);
   openSheet(navBar(navBtn("close","Close"),"Check-ins","")+`<div class="sh-body"><div class="group">${ds.map(d=>`<div class="row"><div class="main"><div class="t">${esc(fmtDate(d.date))}</div><div class="s">${[d.energy!=null?"Energy "+d.energy:"", d.soreness!=null?"Sore "+d.soreness:"", d.sleep!=null?d.sleep+" h":"", d.hrv!=null?"HRV "+d.hrv:"", d.rhr!=null?"RHR "+d.rhr:""].filter(Boolean).join(" · ")||"–"}</div></div></div>`).join("")||'<div class="empty">No check-ins yet.</div>'}</div></div>`); }
 function goalSheet(i){
@@ -1438,7 +1469,7 @@ document.addEventListener("click", e=>{
   if(!db){ toast("Saving isn't available here"); return; }
   ({logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, warmup:()=>warmSheet(a.dataset.d), warmtick:()=>warmTick(a.dataset.id), metric:()=>metricSheet(a.dataset.k), mrange:()=>{ mRange=+a.dataset.n||90; metricSheet(a.dataset.k); }, sug:()=>sugSheet(a.dataset.id), rundetail:()=>runDetail(a.dataset.id), notfeeling:notFeelingSheet, nfsend:sendNotFeeling,
     nfpick:()=>{ nfPick=NF[+a.dataset.i]||""; sh.querySelectorAll('[data-act="nfpick"]').forEach(b=>b.setAttribute("aria-pressed", b===a)); }, ptslot:()=>ptSlotSheet(a.dataset.slot), updates:updList, checkins:checkinList, reqsave:saveReq,
-    newreq:()=>reqForm(a.dataset.pre), attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
+    pweek:()=>pweekSheet(a.dataset.w), newreq:()=>reqForm(a.dataset.pre), reqtpl:()=>{ const t=$("#reqText"); if(!t) return; const cur=t.value.trim(); t.value=cur?cur+"\n"+a.dataset.t:a.dataset.t; reqDraft.text=t.value; t.focus(); t.setSelectionRange(t.value.length,t.value.length); }, attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),
     goal:()=>goalSheet(a.dataset.i), goalsave:()=>saveGoal(a.dataset.i), goaldel:()=>saveGoal(a.dataset.i,true),
     daysheet:()=>daySheet(a.dataset.d), ptedit:()=>{ if(dlg.open) draftClear(); ptEditSheet(); }, ptitem:()=>ptItemSheet(a.dataset.i), ptitemsave:()=>ptItemSave(a.dataset.i), ptitemdel:()=>ptItemSave(a.dataset.i,true), ptex:()=>ptExSheet(a.dataset.id), ptexsave:()=>ptExSave(a.dataset.id), ptexdel:()=>ptExSave(a.dataset.id,true), ptinc:()=>ptInc(a.dataset.id), sugadd:()=>sugAct(a.dataset.id,true), sugno:()=>sugAct(a.dataset.id,false),
@@ -1475,6 +1506,7 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
   db.collection("requests").onSnapshot(s=>{ S.requests=s.docs.map(d=>Object.assign({id:d.id},d.data())); queue(); },()=>{});
   db.collection("updates").onSnapshot(s=>{ S.updates=s.docs.map(d=>Object.assign({id:d.id},d.data())); queue(); },()=>{});
   db.doc("settings/goals").onSnapshot(d=>{ S.goals=d.exists?d.data():null; queue(); },()=>{});
+  db.doc("settings/program").onSnapshot(d=>{ S.program=d.exists?d.data():null; queue(); },()=>{});
   db.doc("settings/goalSuggestions").onSnapshot(d=>{ S.goalSug=d.exists?d.data():null; queue(); },()=>{});
   db.doc("settings/ptDaily").onSnapshot(d=>{ S.ptDaily=d.exists?d.data():null; queue(); },()=>{});
   db.start();
@@ -1482,6 +1514,6 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.08.2101";</script>
+<script>window.FP_VERSION="2026.11.08.2125";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>

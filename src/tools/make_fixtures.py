@@ -404,6 +404,28 @@ for n, (off, title, detail) in enumerate(
     d = iso(day(off))
     row("updates", f"{d}-{n}", {"date": d, "title": title, "detail": detail})
 
+# ---- program and an answered request
+p1 = [("2026-11-02", 10, 4), ("2026-11-09", 11, 5), ("2026-11-16", 13, 6), ("2026-11-23", 12, 6), ("2026-11-30", 15, 7), ("2026-12-07", 18, 8), ("2026-12-14", 21, 9), ("2026-12-21", 25, 10)]
+p2 = []
+start2 = datetime.date(2026, 12, 28)
+for n in range(1, 19):
+    s = start2 + datetime.timedelta(days=7 * (n - 1))
+    miles = [29, 33, 36, 38, 40, 43, 45, 47, 49, 51, 53, 55, 50, 54, 48, 42, 34, 20][n - 1]
+    long = [11, 12, 13, 14, 15, 16, 16, 17, 18, 18, 20, 20, 16, 20, 17, 13, 10, 26][n - 1]
+    p2.append({"n": n, "start": iso(s), "miles": miles, "long": long, "sessions": [
+        {"day": "Tue", "type": "Lactate threshold", "miles": 8, "detail": "4 mi at threshold pace"},
+        {"day": "Thu", "type": "Medium-long run", "miles": 11, "detail": "Steady"},
+        {"day": "Sat", "type": "Long run", "miles": long, "detail": "Easy, last 2 mi steady"},
+    ]})
+row("settings", "program", {
+    "phase1": {"start": "2026-10-24", "end": "2026-12-27", "weeks": [{"start": s, "miles": m, "long": l} for s, m, l in p1]},
+    "phase2": {"start": "2026-12-28", "race": "2027-05-02", "weeks": p2},
+    "tailoring": ["Long runs on Saturday", "Sunday soccer counts as a hard day", "Lifting on Days A, B (trimmed) and D", "Key runs before lifting"],
+    "updated": iso(day(-1)),
+})
+row("requests", "r1", {"created": f"{iso(day(-2))}T18:10:00.000Z", "text": "Swap Smith bench for barbell bench going forward. Equipment: full gym.", "kind": "change",
+                       "status": "applied", "reply": "Done. Day A now has barbell bench at 135 for 4 x 6; Smith bench history kept.", "resolvedAt": iso(day(-1)), "attachments": []})
+
 # ---- write
 for r in rows:
     folder = OUT / r["coll"]

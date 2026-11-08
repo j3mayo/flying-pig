@@ -241,6 +241,22 @@ for(const scheme of ['light','dark']){
  await pg.tap('.tab[data-tab="plan"]');await W(150);await pg.tap('[data-pseg="lifts"]');await W(150);await pg.tap('[data-lday="B"]');await W(100);await pg.tap('[data-act="workout"][data-day="B"]');await W(400);
  await pg.tap('[data-w="discard"]');await W(150);ok(P+'discard asks for a second tap',(await pg.textContent('[data-w="discard"]')).includes('Tap again'));
  await pg.tap('[data-w="discard"]');await W(400);ok(P+'discard removes the session',await pg.evaluate(()=>!Object.values(__store).some(v=>v&&v.status==='in_progress'&&v.exercises))&&!(await pg.evaluate(()=>document.getElementById('dlg').open)));
+ // Program view, Coach conversation
+ await pg.tap('.tab[data-tab="plan"]');await W(200);await pg.tap('[data-pseg="program"]');await W(300);
+ ok(P+'Program shows both phases',(await pg.textContent('#view')).includes('Phase 1')&&(await pg.textContent('#view')).includes('Phase 2'));
+ ok(P+'program weeks listed with planned miles',(await pg.$$('[data-act="pweek"]')).length>=20&&/\/ \d+ mi|\d+ mi/.test(await pg.textContent('[data-act="pweek"] >> nth=0')));
+ ok(P+'program rows stay on one line',await pg.$$eval('[data-act="pweek"] .t, [data-act="pweek"] .s',x=>x.length>0&&x.every(e=>e.scrollHeight<=e.clientHeight+4)));
+ await pg.tap('[data-act="pweek"] >> nth=0');await W(250);ok(P+'tapping a week opens its days',(await pg.textContent('.sh-nav .ttl')).startsWith('Week of'));await pg.tap('.sh [data-act="close"]');await W(200);
+ await pg.evaluate(()=>{delete __store['settings/program'];__rt({eventType:'DELETE',old:{coll:'settings',id:'program'}});});await W(300);
+ ok(P+'without a program the view says when it arrives',(await pg.textContent('#view')).includes('midnight')&&(await pg.$$('[data-act="pweek"]')).length>=4);
+ await pg.tap('.tab[data-tab="you"]');await W(250);await pg.tap('[data-act="req"]:has-text("Equipment: full gym")');await W(250);
+ ok(P+'request detail leads with the coach reply',(await pg.textContent('.sh .cap >> nth=0')).startsWith('Coach')&&((await pg.textContent('.sh .group.reply'))||'').includes('Day A now has barbell bench'),JSON.stringify([await pg.textContent('.sh-nav .ttl'),(await pg.textContent('.sh .cap >> nth=0')).slice(0,40),((await pg.textContent('.sh-body'))||'').slice(0,160)]));
+ await pg.tap('.sh [data-act="close"]');await W(200);await pg.tap('.sec-h [data-act="newreq"]');await W(250);
+ ok(P+'request templates offered',(await pg.$$('[data-act="reqtpl"]')).length>=4);
+ await pg.tap('[data-act="reqtpl"] >> nth=0');await W(150);ok(P+'template fills the request box',(await pg.inputValue('#reqText')).startsWith('Swap ['));
+ await pg.tap('.sh [data-act="close"]');await W(200);await pg.tap('[data-act="updates"]');await W(250);
+ ok(P+'Coach Log groups updates by day',(await pg.textContent('.sh-nav .ttl'))==='Coach Log'&&(await pg.$$('.sh .cap')).length>=2&&(await pg.$$('.sh [data-act="upd"]')).length>=3);
+ await pg.tap('.sh [data-act="close"]');await W(200);
  // native polish pass: in-flow check-in, collapsing nav, two-state tab glyphs, one radius, folded citations, full-width titles
  await pg.tap('.tab[data-tab="today"]');await W(250);
  ok(P+'check-in button sits in the page, not floating',await pg.$eval('.ckin',e=>getComputedStyle(e).position!=='fixed'));
