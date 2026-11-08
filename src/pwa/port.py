@@ -84,4 +84,11 @@ rep('''  db.doc("settings/goalSuggestions").onSnapshot(d=>{ S.goalSug=d.exists?d
 src = src.replace('</body>', '').replace('<div class="foot" style="padding-top:14px">Status compares', '<div class="foot" style="padding-top:14px">Status compares') 
 src += '\n<script>window.FP_VERSION="'+VERSION+'";</script>\n<script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>\n</body></html>\n'
 (D/"app.html").write_text(src)
-print("ok", len(src))
+
+# stamp the service worker cache name so every build invalidates the old shell
+sw = D.parent.parent/"sw.js"
+sw_src = sw.read_text()
+sw_new, n = re.subn(r'const C = "fp-shell-[^"]*";', f'const C = "fp-shell-{VERSION}";', sw_src)
+if n != 1: sys.exit("sw.js: cache name constant not found")
+sw.write_text(sw_new)
+print("ok", len(src), "sw", VERSION)

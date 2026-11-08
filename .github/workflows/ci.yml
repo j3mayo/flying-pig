@@ -1,0 +1,25 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Build and run both Playwright suites on synthetic fixtures
+        run: bash src/build.sh
+      - name: Generated index.html matches the committed one (apart from the version stamps)
+        run: |
+          git diff --stat -- index.html sw.js
+          test "$(git diff -- index.html sw.js | grep '^[-+]' | grep -v '^[-+][-+]' | grep -vc 'FP_VERSION\|fp-shell-')" = "0"

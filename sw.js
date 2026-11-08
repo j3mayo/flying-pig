@@ -1,5 +1,5 @@
 /* Offline shell. Always asks the network first (bypassing the browser cache) so updates show on the next open. */
-const C = "fp-shell-2026.11.03.2130";
+const C = "fp-shell-2026.11.08.2021";
 self.addEventListener("install", e => { e.waitUntil(caches.open(C).then(c => c.addAll(["./", "apple-touch-icon.png", "icon-192.png", "manifest.webmanifest"].map(u => new Request(u, {cache:"reload"}))))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== C).map(x => caches.delete(x)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", e => {

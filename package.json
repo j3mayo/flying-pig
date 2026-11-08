@@ -1,0 +1,12 @@
+{
+  "name": "flying-pig",
+  "private": true,
+  "description": "Healthspan: private training app. Build and test with bash src/build.sh.",
+  "scripts": {
+    "build": "bash src/build.sh",
+    "fixtures": "python3 src/tools/make_fixtures.py"
+  },
+  "devDependencies": {
+    "playwright": "1.64.1"
+  }
+}

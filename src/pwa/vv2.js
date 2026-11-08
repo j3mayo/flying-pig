@@ -18,7 +18,7 @@ window.supabase={createClient(){let sess=JSON.parse(LS.getItem('mock-sess')||'nu
  storage:{from(){return{upload:async(p,b,o)=>{__uploads.push({p,type:o.contentType,size:b.size});return{error:null}},createSignedUrl:async()=>({data:{signedUrl:'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='}})}}}}}};})();`;
 const mockTess=`window.Tesseract={recognize:async()=>({data:{text:'Side plank 3 x 30 s each side. Band external rotation 3 x 15.'}})};`;
 const mockPdf=`window.pdfjsLib={GlobalWorkerOptions:{},getDocument:()=>({promise:Promise.resolve({numPages:1,getPage:async()=>({getTextContent:async()=>({items:[{str:'PT plan: Wall slides 3 x 10, prone Y 3 x 12, chin tucks daily.'}]})})})})};`;
-const R=[];const ok=(n,c,x)=>R.push((c?'PASS ':'FAIL ')+n+(x?' :: '+x:''));
+const R=[];process.on('unhandledRejection',e=>{console.log(R.join('\n'));console.log('FAIL crash: '+String(e&&e.message||e).split('\n')[0]);process.exit(1);});const ok=(n,c,x)=>R.push((c?'PASS ':'FAIL ')+n+(x?' :: '+x:''));
 async function route(pg){await pg.route('**/*',r=>{const u=r.request().url();
  if(u.startsWith('https://app.test/')&&/\.png$/.test(u))return r.fulfill({contentType:'image/png',body:fs.readFileSync(path.join(DIR,'../..',u.split('/').pop()))});
  if(u.startsWith('https://app.test/')&&/\.(webmanifest|js)$/.test(u))return r.fulfill({contentType:'application/octet-stream',body:fs.readFileSync(path.join(DIR,'../..',u.split('/').pop()))});
@@ -49,8 +49,8 @@ for(const scheme of ['light','dark']){
  const ctx=await b.newContext({...devices['iPhone 13'],colorScheme:scheme,serviceWorkers:'block'});const pg=await ctx.newPage();const errs=[];pg.on('pageerror',e=>errs.push(e.message));await route(pg);
  await pg.addInitScript(()=>{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.setItem('mock-sess',JSON.stringify({user:{id:'u1'}}));}});
  await pg.goto('https://app.test/');await pg.waitForTimeout(700);
- const st=await pg.evaluate(()=>({plan:Object.keys(__store).filter(k=>k.startsWith('plan/')).length}));
- ok(scheme+': migrated plan visible (65 days in store)',st.plan===65&&(await pg.$$('#view .tli')).length>=1,String(st.plan));
+ const planN=Object.keys(seed).filter(k=>k.startsWith('plan/')).length;const st=await pg.evaluate(()=>({plan:Object.keys(__store).filter(k=>k.startsWith('plan/')).length}));
+ ok(scheme+': plan days all in store ('+planN+')',st.plan===planN&&(await pg.$$('#view .tli')).length>=1,String(st.plan));
  ok(scheme+': home-screen tags present',await pg.evaluate(()=>!!document.querySelector('link[rel=apple-touch-icon]')&&document.querySelector('meta[name=apple-mobile-web-app-capable]').content==='yes'));
  await pg.tap('#logBtn');await pg.waitForTimeout(200);
  ok(scheme+': sheet opens with no button focused',await pg.evaluate(()=>document.activeElement&&document.activeElement.id)==='sh');
@@ -67,7 +67,8 @@ for(const scheme of ['light','dark']){
  await pg.tap('.tab[data-tab="you"]');await pg.waitForTimeout(200);await pg.tap('[data-act="req"] >> nth=0');await pg.waitForTimeout(300);
  ok(scheme+': request detail shows attachments',(await pg.$$('.sh .att .a')).length===2);await pg.tap('.sh [data-act="close"]');await pg.waitForTimeout(200);
  await pg.tap('[data-act="gear"][data-id="new"]');await pg.waitForTimeout(200);await pg.fill('#gnName','Nike Pegasus 41');await pg.fill('#gnSince','2026-10-20');await pg.fill('#gnBase','10');await pg.tap('[data-act="gearsave"]');await pg.waitForTimeout(300);
- ok(scheme+': shoes added with miles counted',(await pg.$$eval('[data-act="gear"]',x=>x.map(e=>e.textContent))).some(t=>t.includes('Pegasus')&&t.includes('16.1 mi')));
+ const shoeMi=String(Math.round((10+Object.entries(seed).filter(([k,v])=>k.startsWith('runs/')&&v.date>='2026-10-20'&&!v.shoe).reduce((a,[,v])=>a+(+v.miles||0),0))*10)/10)+' mi';
+ ok(scheme+': shoes added with miles counted ('+shoeMi+')',(await pg.$$eval('[data-act="gear"]',x=>x.map(e=>e.textContent))).some(t=>t.includes('Pegasus')&&t.includes(shoeMi)));
  await pg.tap('[data-act="goal"][data-i="new"]');await pg.waitForTimeout(200);await pg.fill('#gT','Sub 4:00 marathon');await pg.tap('[data-act="goalsave"]');await pg.waitForTimeout(300);
  ok(scheme+': goal added',await pg.evaluate(()=>__store['settings/goals'].items.some(i=>i.title==='Sub 4:00 marathon')));
  await pg.evaluate(()=>{window.__failNext=true;});await pg.tap('[data-act="goal"][data-i="new"]');await pg.waitForTimeout(200);await pg.fill('#gT','Should not stick');await pg.tap('[data-act="goalsave"]');await pg.waitForTimeout(300);
@@ -91,6 +92,6 @@ for(const scheme of ['light','dark']){
  await pg.tap('.tab[data-tab="you"]');await pg.waitForTimeout(200);await pg.tap('[data-act="signout"]');await pg.waitForTimeout(600);
  ok(scheme+': sign out returns to sign-in screen',await pg.isVisible('.auth #auIn'));
  ok(scheme+': no script errors',errs.length===0,errs.join('|'));await ctx.close();}
-ok('no em dashes in app',!html.includes('—'));
+ok('no em dashes in app',!html.includes('\u2014'));
 ok('no secret keys in app (publishable key only)',!/service_role|sb_secret_/.test(html));
 console.log(R.join('\n'));await b.close();})();

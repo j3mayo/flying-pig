@@ -14,7 +14,7 @@ if(seed['loads/b1'])seed['loads/b1'].history=[...(seed['loads/b1'].history||[]),
 seed['settings/goalSuggestions']={items:[{id:'g1',title:'Average 7.5 h of sleep',detail:'7-day average',why:'Sleep has been under 7 h on 3 nights this week.'},{id:'g2',title:'Check in 5 days a week',detail:'',why:'Check-ins let the plan adjust to how you feel.'}]};
 const html=fs.readFileSync(path.join(DIR,'app.html'),'utf8');
 const src=fs.readFileSync(path.join(DIR,'vv2.js'),'utf8');const mockSb=eval(src.match(/const mockSb=(`[\s\S]*?`);/)[1].replace('${JSON.stringify(seed)}','__SEED__')).replace('__SEED__',JSON.stringify(seed));
-const R=[];const ok=(n,c,x)=>R.push((c?'PASS ':'FAIL ')+n+(x?' :: '+x:''));
+const R=[];process.on('unhandledRejection',e=>{console.log(R.join('\n'));console.log('FAIL crash: '+String(e&&e.message||e).split('\n')[0]);process.exit(1);});const ok=(n,c,x)=>R.push((c?'PASS ':'FAIL ')+n+(x?' :: '+x:''));
 async function route(pg){await pg.route('**/*',r=>{const u=r.request().url();
  if(u.startsWith('https://app.test/')&&/\.png$/.test(u))return r.fulfill({contentType:'image/png',body:fs.readFileSync(path.join(DIR,'../..',u.split('/').pop()))});
  if(u.startsWith('https://app.test/')&&/\.(webmanifest|js)$/.test(u))return r.fulfill({body:fs.readFileSync(path.join(DIR,'../..',u.split('/').pop()))});
