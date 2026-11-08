@@ -32,7 +32,7 @@ css = '''
 .auth-in{width:100%;max-width:400px}
 .auth-ic{display:block;width:84px;height:84px;border-radius:19px;margin:0 auto 14px;box-shadow:0 4px 16px rgba(0,0,0,.18)}
 .auth input{width:100%;border:0;background:transparent;font:inherit;color:var(--label);padding:2px 0;outline:none}
-.auth input::placeholder{color:var(--label-3)}
+.auth input::placeholder{color:var(--label-2)}
 .auth .btn-big{margin-top:14px}
 .auth-msg{min-height:20px;color:var(--label-2);font-size:13px;padding:8px 16px 0;text-align:center}
 .auth-alt{display:block;margin:16px auto 0;background:none;border:0;color:var(--tint);font-size:15px}

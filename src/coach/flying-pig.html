@@ -3,14 +3,15 @@
 <style>
 /* Layout: iOS-native. Large title that collapses into a translucent bar on scroll, inset grouped lists, two-state tab glyphs, sheets with grabbers. One token scale: radii 10 / 14 / pill, type 11 13 15 17 20 22 28 34. */
 :root{
-  --bg:#000000; --card:#161618; --card-2:#232326; --fill:rgba(120,120,128,.22); --fill-2:rgba(120,120,128,.34);
+  --bg:#000000; --card:#1C1C1E; --card-2:#2C2C2E; --fill:rgba(120,120,128,.22); --fill-2:rgba(120,120,128,.34);
   --sep:rgba(84,84,88,.55); --label:#FFFFFF; --label-2:rgba(235,235,245,.62); --label-3:rgba(235,235,245,.32);
-  --tint:#0A84FF; --run:#30D158; --lift:#0A84FF; --pt:#BF5AF2; --soc:#FF9F0A; --warn:#FF9F0A; --bad:#FF453A; --good:#30D158;
+  --tint:#0A84FF; --tint-2:#409CFF; --run:#30D158; --lift:#7D7AFF; --pt:#BF5AF2; --soc:#FF9F0A; --warn:#FF9F0A; --bad:#FF453A; --good:#30D158;
   --bar:rgba(10,10,12,.88); --on-tint:#FFFFFF; --rec:#64D2FF; --bod:#FFD60A;
   --r-ctl:10px; --r-card:14px; --r-pill:999px;
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
   --font-d:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --font-r:ui-rounded,"SF Pro Rounded",-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
   color-scheme:dark;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -50,7 +51,7 @@ button.row:active{background:var(--fill)}
 .wrapok .t,.wrapok .s{white-space:normal}
 .info{width:24px;height:24px;border-radius:50%;border:0;background:var(--fill);color:var(--tint);font:700 14px/1 Georgia,"Times New Roman",serif;font-style:italic;cursor:pointer;flex:none;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .hero{padding:4px 4px 14px}
-.hero .big{font:700 28px/1.15 var(--font-d);font-variant-numeric:tabular-nums}
+.hero .big{font:700 28px/1.15 var(--font-r);font-variant-numeric:tabular-nums}
 .hero .pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .steps{margin:0;padding:12px 16px 12px 36px;display:grid;gap:8px;font-size:17px;line-height:1.4}
 .para{padding:12px 16px;font-size:17px;line-height:1.45;margin:0}
@@ -58,11 +59,11 @@ button.row:active{background:var(--fill)}
 .row .s{font-size:15px;color:var(--label-2);margin-top:1px}
 .row .v{color:var(--label-2);font-size:17px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .group.reply .para{font-size:17px;line-height:1.45}.group.reply.wait .para{color:var(--label-2)}
-.st{font-weight:600}.st.good{color:var(--good)}.st.warn{color:var(--warn)}.st.bad{color:var(--bad)}.st.tint{color:var(--tint)}
+.st{font-weight:600}.st.good{color:var(--good)}.st.warn{color:var(--warn)}.st.bad{color:var(--bad)}.st.tint{color:var(--tint-2)}
 .chev{width:8px;height:14px;flex:none;color:var(--label-3)}
 .ico{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex:none;color:#fff}
 .ico svg{width:18px;height:18px}
-.ico.run{background:var(--run)} .ico.lift{background:var(--lift)} .ico.soc{background:var(--soc)} .ico.rest{background:#636366} .ico.extra{background:var(--pt)} .ico.note{background:#5E5CE6} .ico.rec{background:var(--rec);color:#000} .ico.bod{background:var(--bod);color:#000}
+.ico.run{background:var(--run)} .ico.lift{background:var(--lift)} .ico.soc{background:var(--soc)} .ico.rest{background:#636366} .ico.extra{background:var(--pt)} .ico.note{background:var(--tint)} .ico.rec{background:var(--rec);color:#000} .ico.bod{background:var(--bod);color:#000}
 .btn-big{display:flex;justify-content:center;align-items:center;gap:8px;width:100%;min-height:50px;border-radius:var(--r-card);border:0;background:var(--tint);color:var(--on-tint);font-weight:600;font-size:17px;cursor:pointer}
 .btn-big.sec2{background:var(--fill);color:var(--tint)}
 .btn-big:active{opacity:.8}
@@ -70,7 +71,7 @@ button.row:active{background:var(--fill)}
 .pill.good{color:var(--good);background:color-mix(in srgb,var(--good) 16%,transparent)}
 .pill.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
 .pill.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 16%,transparent)}
-.pill.tint{color:var(--tint);background:color-mix(in srgb,var(--tint) 16%,transparent)}
+.pill.tint{color:var(--tint-2);background:color-mix(in srgb,var(--tint) 16%,transparent)}
 .callout{background:var(--card);border-radius:var(--r-card);padding:14px 16px;display:grid;gap:6px}
 .callout .h svg{width:16px;height:16px;color:var(--run)}
 .callout .h{display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600;color:var(--label-2);text-transform:uppercase;letter-spacing:.04em}
@@ -98,7 +99,7 @@ button:focus:not(:focus-visible),input:focus:not(:focus-visible){outline:none}
 .frow input[type=date]{min-height:34px}
 .chart{background:var(--card);border-radius:var(--r-card);padding:14px 16px 10px}
 .chart .k{font-size:13px;font-weight:600;color:var(--label-2);text-transform:uppercase;letter-spacing:.04em}
-.chart .n{font:700 28px/1.15 var(--font-d);font-variant-numeric:tabular-nums;margin-top:2px}
+.chart .n{font:700 28px/1.15 var(--font-r);font-variant-numeric:tabular-nums;margin-top:2px}
 .chart .n small{font-size:15px;color:var(--label-2);font-weight:500}
 .chart .d{font-size:13px;color:var(--label-2);margin-bottom:6px}
 .chart .take{font-size:15px;margin-top:6px}
@@ -159,7 +160,7 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 .addset{width:100%;border:0;background:none;color:var(--tint);font-size:15px;font-weight:600;min-height:44px;border-top:.5px solid var(--sep);cursor:pointer}
 .simple{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 10px 16px;gap:12px}
 .rest{position:sticky;bottom:0;margin:12px -4px 0;background:var(--card-2);border-radius:var(--r-card);box-shadow:0 8px 30px rgba(0,0,0,.35);padding:10px 12px;display:flex;align-items:center;gap:10px}
-.rest .tm{font:700 28px var(--font-d);font-variant-numeric:tabular-nums;min-width:72px}
+.rest .tm{font:700 28px var(--font-r);font-variant-numeric:tabular-nums;min-width:72px}
 .rest .nx{flex:1;min-width:0;font-size:13px;color:var(--label-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rest button{border:0;background:var(--fill);border-radius:var(--r-ctl);min-height:36px;padding:0 10px;font-weight:600;font-size:15px;cursor:pointer;color:var(--tint)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:rgba(30,30,32,.94);color:#fff;padding:11px 16px;border-radius:var(--r-card);font-size:15px;font-weight:500;z-index:50;max-width:calc(100% - 32px);text-align:center}
@@ -170,7 +171,7 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 .day + .day::before{content:"";position:absolute;top:0;left:70px;right:0;height:.5px;background:var(--sep)}
 .dt{width:44px;flex:none;text-align:center;border-radius:var(--r-ctl);background:var(--fill);padding:5px 0 6px}
 .dt .w{font-size:11px;font-weight:700;color:var(--label-2);letter-spacing:.06em}
-.dt .n{font:600 22px/1.1 var(--font-d);font-variant-numeric:tabular-nums}
+.dt .n{font:600 22px/1.1 var(--font-r);font-variant-numeric:tabular-nums}
 .dt.soon{background:color-mix(in srgb,var(--tint) 14%,transparent)}.dt.soon .w{color:var(--tint)}
 .acts{flex:1;min-width:0;display:grid;gap:5px}
 .act{display:flex;align-items:center;gap:8px;font-size:17px;min-width:0}
@@ -185,7 +186,7 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 .pillar h3{margin:0;font:600 20px var(--font-d);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pillar .nums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px;margin-top:14px}
 .num .k{font-size:11px;font-weight:600;color:var(--label-2);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.num .v{font:700 22px/1.15 var(--font-d);font-variant-numeric:tabular-nums;margin-top:2px}
+.num .v{font:700 22px/1.15 var(--font-r);font-variant-numeric:tabular-nums;margin-top:2px}
 .num .v small{font-size:13px;color:var(--label-2);font-weight:500}
 .num .d{font-size:13px;color:var(--label-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pillar svg{display:block;width:100%;height:auto;margin-top:12px}
@@ -226,6 +227,13 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 .ptc.full{background:var(--good);color:#fff}.ptc svg{width:18px;height:18px}
 .ms-when{font-size:13px;color:var(--label-2);white-space:nowrap}
 /* Today */
+.ready{display:flex;align-items:center;gap:12px;margin-top:16px;width:100%;background:var(--card);border-radius:var(--r-card);padding:12px 14px 12px 16px;border:0;text-align:left;color:inherit;cursor:pointer;min-height:66px}
+.ready:active{background:var(--card-2)}
+.ready .dot{width:12px;height:12px;border-radius:6px;flex:none;background:var(--c);box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 22%,transparent)}
+.ready .main{flex:1;min-width:0}
+.ready .k{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ready .t{font:600 17px var(--font-d);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ready .s{font-size:13px;color:var(--label-2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dt1{font-size:28px}
 @media (max-width:380px){.dt1{font-size:26px}} @media (max-width:340px){.dt1{font-size:22px}}
 .cd{margin-top:2px}
@@ -239,7 +247,7 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 .rt{position:relative;text-align:center;min-width:0;padding:0 6px}
 .rt + .rt::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:.5px;background:var(--sep)}
 .rt svg{width:58px;height:58px;display:block;margin:0 auto 8px}
-.rt b{position:absolute;left:0;right:0;top:0;height:58px;display:flex;align-items:center;justify-content:center;font:700 17px var(--font-d);font-variant-numeric:tabular-nums}
+.rt b{position:absolute;left:0;right:0;top:0;height:58px;display:flex;align-items:center;justify-content:center;font:700 18px var(--font-r);font-variant-numeric:tabular-nums}
 .rt span{display:block;font-size:11px;font-weight:600;color:var(--label-2);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wkc{margin-top:12px;background:var(--card);border-radius:var(--r-card);padding:6px 8px 8px}
 .wkh{display:flex;align-items:center;justify-content:space-between;padding:0 4px 0 8px;min-height:40px}
@@ -250,7 +258,7 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 .ws{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
 .wd{border:0;border-radius:var(--r-ctl);background:none;color:var(--label);padding:4px 0 6px;cursor:pointer;min-height:60px;display:grid;justify-items:center;gap:2px}
 .wd small{font-size:11px;font-weight:600;color:var(--label-2);letter-spacing:.04em}
-.wd b{width:32px;height:32px;border-radius:16px;display:grid;place-items:center;font:600 17px var(--font-d);font-variant-numeric:tabular-nums}
+.wd b{width:32px;height:32px;border-radius:16px;display:grid;place-items:center;font:600 17px var(--font-r);font-variant-numeric:tabular-nums}
 .wd .dots{display:flex;gap:3px;height:5px}.wd .dots i{width:5px;height:5px;border-radius:3px}
 .wd.past b{color:var(--label-2)}
 .wd.on b{background:var(--label);color:var(--bg)}
@@ -266,7 +274,7 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 .tli.done .tlc{opacity:.55}
 .tli.next .tlc{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 45%,transparent)}
 .go{flex:none;border:0;border-radius:var(--r-pill);min-height:44px;padding:0 18px;font:700 15px var(--font);cursor:pointer;white-space:nowrap}
-.go.run{background:var(--run);color:#000}.go.lift{background:var(--lift);color:#fff}.go.pt{background:var(--pt);color:#000}.go.grey{background:var(--card-2);color:var(--label)}
+.go.run{background:var(--run);color:#000}.go.lift{background:var(--lift);color:#000}.go.pt{background:var(--pt);color:#000}.go.grey{background:var(--card-2);color:var(--label)}
 .go:active{opacity:.8}
 .tl-ok{flex:none;width:28px;height:28px;display:grid;place-items:center}.tl-ok svg{width:22px;height:22px}
 .ckin{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:50px;margin-top:12px;border:0;border-radius:var(--r-card);background:var(--card);color:var(--label);font:600 17px var(--font);cursor:pointer;white-space:nowrap}
@@ -287,6 +295,7 @@ button.tl-ok{border:0;background:none;padding:0;cursor:pointer;width:44px;height
 /* workout extras */
 button.pv{border:0;background:none;padding:0;text-align:left;font:inherit;font-size:15px;color:var(--label-2);min-height:40px;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 .sg.pr{background:color-mix(in srgb,var(--bod) 16%,transparent)}.sg.pr .ck{background:var(--bod);color:#000}
+.sg.pr .no::after{content:"PR";font-size:9px;font-weight:800;color:var(--bod);display:block;line-height:1;margin-top:-2px}
 .plates{display:flex;align-items:center;gap:4px;justify-content:center;min-height:110px}
 .pl{display:grid;place-items:center;width:30px;height:var(--h);border-radius:6px;background:var(--card-2);border:1px solid var(--sep);font:700 13px var(--font);font-variant-numeric:tabular-nums}
 .pltxt{text-align:center;font-size:17px;font-weight:600;margin-top:10px}
@@ -477,6 +486,39 @@ function weekStrip(m, sel){ const t=todayISO();
   return `<div class="ws" role="group" aria-label="This week">${Array.from({length:7},(_,i)=>{ const d=addDays(m,i), p=S.plan[d]||{}, x=parse(d);
     const dots=[p.lift?"var(--lift)":"", p.run&&p.run.miles>0?"var(--run)":"", p.extra?"var(--pt)":"", p.soccer?"var(--soc)":""].filter(Boolean);
     return `<button type="button" class="wd${d===sel?" on":""}${d<t&&dayStatus(d)==="done"?" past":""}" data-sday="${d}" aria-pressed="${d===sel}" aria-label="${esc(longDate(d))}"><small>${DOW[x.getDay()][0]}</small><b>${x.getDate()}</b><span class="dots">${dots.map(c=>`<i style="background:${c}"></i>`).join("")}</span></button>`; }).join("")}</div>`; }
+function readiness(t){
+  const hrv7=mean(dvals("hrv",addDays(t,-6),t)), hrvB=mean(dvals("hrv",addDays(t,-20),addDays(t,-7)));
+  const rhr7=mean(dvals("rhr",addDays(t,-6),t)), rhrB=mean(dvals("rhr",addDays(t,-20),addDays(t,-7)));
+  const last=S.daily[t]||{}, y=S.daily[addDays(t,-1)]||{};
+  const sleep=last.sleep!=null&&last.sleep!==""?+last.sleep:(y.sleep!=null&&y.sleep!==""?+y.sleep:null);
+  const sore=Math.max(last.soreness!=null?+last.soreness:-1, y.soreness!=null?+y.soreness:-1);
+  const lowE=[last,y].filter(x=>x.energy!=null&&+x.energy<=2).length;
+  const hrvCh=hrv7!=null&&hrvB?(hrv7-hrvB)/hrvB:null, rhrUp=rhr7!=null&&rhrB!=null?rhr7-rhrB:null;
+  const facts={hrv7, hrvB, rhr7, rhrB, sleep, sore, lowE, hrvCh, rhrUp};
+  if(hrv7==null&&rhr7==null&&sleep==null&&!lowE&&sore<0) return Object.assign({lvl:"none", t:"Readiness unknown", s:"Needs watch data or a check-in", c:"var(--label-3)"}, facts);
+  if(sore>=7) return Object.assign({lvl:"low", t:"Rest or very easy", s:`Soreness ${sore} of 10, keep loads where they are`, c:"var(--bad)"}, facts);
+  if(hrvCh!=null&&hrvCh<=-.15&&rhrUp!=null&&rhrUp>=2&&(lowE||sore>=5)) return Object.assign({lvl:"low", t:"Rest or very easy", s:`HRV ${Math.round(hrv7)}, ${Math.round(-hrvCh*100)}% under baseline, resting HR up ${Math.round(rhrUp)}`, c:"var(--bad)"}, facts);
+  const why=[];
+  if(lowE>=2) why.push("Energy low two check-ins in a row");
+  if(hrvCh!=null&&hrvCh<=-.10) why.push(`HRV ${Math.round(hrv7)}, ${Math.round(-hrvCh*100)}% under your baseline`);
+  if(rhrUp!=null&&rhrUp>=3) why.push(`Resting HR up ${Math.round(rhrUp)} bpm on the week`);
+  if(sleep!=null&&sleep<6) why.push(`Slept ${sleep} h`);
+  if(sore>=5) why.push(`Soreness ${sore} of 10`);
+  if(why.length) return Object.assign({lvl:"watch", t:"Take it easy today", s:why[0], c:"var(--warn)"}, facts);
+  const ok=[]; if(hrv7!=null) ok.push(`HRV ${Math.round(hrv7)}`); if(rhr7!=null) ok.push(`RHR ${Math.round(rhr7)}`); if(sleep!=null) ok.push(`${sleep} h sleep`);
+  return Object.assign({lvl:"good", t:"Go as planned", s:(ok.length?ok.join(" · ")+", ":"")+"near your baseline", c:"var(--rec)"}, facts);
+}
+function readySheet(){ const t=todayISO(), r=readiness(t), last=S.daily[t]||{}, y=S.daily[addDays(t,-1)]||{};
+  const row=(k,v,s)=>`<div class="row"><div class="main"><div class="t">${k}</div>${s?`<div class="s">${s}</div>`:""}</div><div class="v">${v}</div></div>`;
+  const pct=(a,b)=>a!=null&&b?`${Math.round((a-b)/b*100)>0?"+":""}${Math.round((a-b)/b*100)}% vs baseline`:"No baseline yet";
+  openSheet(navBar(navBtn("close","Close"),"Readiness","")+`<div class="sh-body"><div class="hero"><div class="big" style="color:${r.c}">${esc(r.t)}</div><div class="foot" style="padding:4px 0 0">${esc(r.s)}</div></div>
+    <div class="cap">What it looks at</div><div class="group">
+    ${row("HRV, 7-day average", r.hrv7!=null?Math.round(r.hrv7)+" ms":"–", pct(r.hrv7,r.hrvB))}
+    ${row("Resting HR, 7-day average", r.rhr7!=null?Math.round(r.rhr7)+" bpm":"–", r.rhrUp!=null?`${r.rhrUp>0?"+":""}${Math.round(r.rhrUp)} bpm vs baseline`:"No baseline yet")}
+    ${row("Sleep, last night", r.sleep!=null?r.sleep+" h":"–", "7 or more hours is the target")}
+    ${row("Check-in", last.energy!=null?`Energy ${last.energy} · Soreness ${last.soreness!=null?last.soreness:"–"}`:(y.energy!=null?`Yesterday: energy ${y.energy} · soreness ${y.soreness!=null?y.soreness:"–"}`:"None yet"), "")}
+    </div>
+    <div class="cap" style="padding-top:18px">How it decides</div><div class="group"><p class="para">Rest or very easy when soreness is 7 or more, or when HRV is 15% or more under your two-week baseline while resting HR is up and you feel low. Take it easy when energy is low two days running, HRV is 10% under baseline, resting HR is up 3 or more, sleep was under 6 hours, or soreness is 5 or more. Otherwise, go as planned. The nightly coach applies the same rules to the plan; this is your morning read on them.</p></div></div>`); }
 function viewToday(){
   const t=todayISO(), d=selDay||t, m=monday(t), wk=weekDays(m);
   const planMi=sum(wk.map(x=>x.p&&x.p.run?x.p.run.miles:0)), actMi=sum(weekRuns(m).map(r=>r.miles));
@@ -490,6 +532,7 @@ function viewToday(){
   const pk=Object.keys(S.plan).sort(), start=pk[0]&&pk[0]<t?pk[0]:"2026-10-24", left=daysBetween(t,RACE), fill=Math.max(2,Math.min(100,Math.round(daysBetween(start,t)/Math.max(1,daysBetween(start,RACE))*100)));
   return `<h1 class="large dt1">${esc(longDate(d).replace(/^(\w+), (\w{3})\w* /,"$1, $2 "))}</h1>
   <div class="cd" role="img" aria-label="${left} days until race day"><div class="cdt"><span class="tk">Race in ${left} days</span>${d!==t?`<button class="lnk back" type="button" data-sday="${t}">Back to today</button>`:`<span class="cdd">${esc(shortDate(RACE))}</span>`}</div><div class="cdb"><i style="width:${fill}%"></i></div></div>
+  ${d===t?(()=>{ const r=readiness(t); return `<button class="ready" type="button" data-act="ready" style="--c:${r.c}" aria-label="Readiness: ${esc(r.t)}"><i class="dot"></i><div class="main"><div class="k">Readiness</div><div class="t">${esc(r.t)}</div><div class="s">${esc(r.s)}</div></div>${CHEV}</button>`; })():""}
   <div class="r3">${tile(r1(actMi),`Miles /${r1(planMi)}`,planMi?actMi/planMi:0,"var(--run)")}${tile(liftsDone,`Lifts /${liftPlan}`,liftPlan?liftsDone/liftPlan:0,"var(--lift)")}${tile(pt.done,`PT /${pt.n}`,pt.n?pt.done/pt.n:0,"var(--pt)")}</div>
   <div class="wkc"><div class="wkh"><span class="cap2">Week of ${esc(shortDate(monday(d)))}</span><span class="wkn"><button class="wkb" type="button" data-sday="${addDays(d,-7)}" aria-label="Previous week">‹</button><button class="wkb" type="button" data-sday="${addDays(d,7)}" aria-label="Next week">›</button></span></div>${weekStrip(monday(d), d)}</div>
   <div class="tl">${tl||`<div class="tli" style="--c:var(--label-3)"><i class="tdot"></i><div class="tlc"><div class="main"><div class="k">Rest day</div><div class="t">Recovery is training too</div></div></div></div>`}</div>
@@ -1304,7 +1347,7 @@ document.addEventListener("click", e=>{
   if(!db){ toast("Saving isn't available here"); return; }
   ({logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, warmup:()=>warmSheet(a.dataset.d), warmtick:()=>warmTick(a.dataset.id), metric:()=>metricSheet(a.dataset.k), mrange:()=>{ mRange=+a.dataset.n||90; metricSheet(a.dataset.k); }, sug:()=>sugSheet(a.dataset.id), rundetail:()=>runDetail(a.dataset.id), notfeeling:notFeelingSheet, nfsend:sendNotFeeling,
     nfpick:()=>{ nfPick=NF[+a.dataset.i]||""; sh.querySelectorAll('[data-act="nfpick"]').forEach(b=>b.setAttribute("aria-pressed", b===a)); }, ptslot:()=>ptSlotSheet(a.dataset.slot), updates:updList, checkins:checkinList, reqsave:saveReq,
-    pweek:()=>pweekSheet(a.dataset.w), newreq:()=>reqForm(a.dataset.pre), reqtpl:()=>{ const t=$("#reqText"); if(!t) return; const cur=t.value.trim(); t.value=cur?cur+"\n"+a.dataset.t:a.dataset.t; reqDraft.text=t.value; t.focus(); t.setSelectionRange(t.value.length,t.value.length); }, attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
+    ready:readySheet, pweek:()=>pweekSheet(a.dataset.w), newreq:()=>reqForm(a.dataset.pre), reqtpl:()=>{ const t=$("#reqText"); if(!t) return; const cur=t.value.trim(); t.value=cur?cur+"\n"+a.dataset.t:a.dataset.t; reqDraft.text=t.value; t.focus(); t.setSelectionRange(t.value.length,t.value.length); }, attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),
     goal:()=>goalSheet(a.dataset.i), goalsave:()=>saveGoal(a.dataset.i), goaldel:()=>saveGoal(a.dataset.i,true),
     daysheet:()=>daySheet(a.dataset.d), ptedit:()=>{ if(dlg.open) draftClear(); ptEditSheet(); }, ptitem:()=>ptItemSheet(a.dataset.i), ptitemsave:()=>ptItemSave(a.dataset.i), ptitemdel:()=>ptItemSave(a.dataset.i,true), ptex:()=>ptExSheet(a.dataset.id), ptexsave:()=>ptExSave(a.dataset.id), ptexdel:()=>ptExSave(a.dataset.id,true), ptinc:()=>ptInc(a.dataset.id), sugadd:()=>sugAct(a.dataset.id,true), sugno:()=>sugAct(a.dataset.id,false),

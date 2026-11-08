@@ -241,6 +241,13 @@ for(const scheme of ['light','dark']){
  await pg.tap('.tab[data-tab="plan"]');await W(150);await pg.tap('[data-pseg="lifts"]');await W(150);await pg.tap('[data-lday="B"]');await W(100);await pg.tap('[data-act="workout"][data-day="B"]');await W(400);
  await pg.tap('[data-w="discard"]');await W(150);ok(P+'discard asks for a second tap',(await pg.textContent('[data-w="discard"]')).includes('Tap again'));
  await pg.tap('[data-w="discard"]');await W(400);ok(P+'discard removes the session',await pg.evaluate(()=>!Object.values(__store).some(v=>v&&v.status==='in_progress'&&v.exercises))&&!(await pg.evaluate(()=>document.getElementById('dlg').open)));
+ // Readiness verdict, lift color split
+ await pg.tap('.tab[data-tab="today"]');await W(250);
+ ok(P+'Today opens with a readiness verdict',/^(Go as planned|Take it easy today|Rest or very easy|Readiness unknown)$/.test(await pg.textContent('.ready .t')),await pg.textContent('.ready .t'));
+ ok(P+'readiness reads the seeded data as recovered',(await pg.textContent('.ready .t'))==='Go as planned',await pg.textContent('.ready .s'));
+ await pg.tap('.ready');await W(250);ok(P+'readiness sheet explains the inputs',(await pg.textContent('.sh-nav .ttl'))==='Readiness'&&(await pg.textContent('.sh-body')).includes('HRV, 7-day average'));await pg.tap('.sh [data-act="close"]');await W(200);
+ ok(P+'lifting has its own color, blue stays for interaction',await pg.evaluate(()=>{const cs=getComputedStyle(document.documentElement);return cs.getPropertyValue('--lift').trim()!==cs.getPropertyValue('--tint').trim();}));
+ ok(P+'lift button text is dark on the lift color',await pg.evaluate(()=>{const b=document.createElement('button');b.className='go lift';document.body.appendChild(b);const c=getComputedStyle(b).color;b.remove();return c==='rgb(0, 0, 0)';}));
  // Program view, Coach conversation
  await pg.tap('.tab[data-tab="plan"]');await W(200);await pg.tap('[data-pseg="program"]');await W(300);
  ok(P+'Program shows both phases',(await pg.textContent('#view')).includes('Phase 1')&&(await pg.textContent('#view')).includes('Phase 2'));
