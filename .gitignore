@@ -4,3 +4,8 @@ src/pwa/shots/
 node_modules/
 .netlify
 .dev/
+
+# OS and secrets
+.DS_Store
+.env
+.env.*
