@@ -276,7 +276,7 @@ for(const scheme of ['light','dark']){
  ok(P+'program rows stay on one line',await pg.$$eval('[data-act="pweek"] .t, [data-act="pweek"] .s',x=>x.length>0&&x.every(e=>e.scrollHeight<=e.clientHeight+4)));
  await pg.tap('[data-act="pweek"] >> nth=0');await W(250);ok(P+'tapping a week opens its days',(await pg.textContent('.sh-nav .ttl')).startsWith('Week of'));await pg.tap('.sh [data-act="close"]');await W(200);
  await pg.evaluate(()=>{delete __store['settings/program'];__rt({eventType:'DELETE',old:{coll:'settings',id:'program'}});});await W(300);
- ok(P+'without a program the view says when it arrives',(await pg.textContent('#view')).includes('midnight')&&(await pg.$$('[data-act="pweek"]')).length>=4);
+ ok(P+'without a program the view says when it arrives',(await pg.textContent('#view')).includes('9 AM review')&&(await pg.$$('[data-act="pweek"]')).length>=4);
  await pg.tap('.tab[data-tab="you"]');await W(250);await pg.tap('[data-act="req"]:has-text("Equipment: full gym")');await W(250);
  ok(P+'request detail leads with the coach reply',(await pg.textContent('.sh .cap >> nth=0')).startsWith('Coach')&&((await pg.textContent('.sh .group.reply'))||'').includes('Day A now has barbell bench'),JSON.stringify([await pg.textContent('.sh-nav .ttl'),(await pg.textContent('.sh .cap >> nth=0')).slice(0,40),((await pg.textContent('.sh-body'))||'').slice(0,160)]));
  await pg.tap('.sh [data-act="close"]');await W(200);await pg.tap('.sec-h [data-act="newreq"]');await W(250);

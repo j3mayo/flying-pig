@@ -706,7 +706,7 @@ function readySheet(){ const t=todayISO(), r=readiness(t), last=S.daily[t]||{}, 
     ${row("Sleep, last night", r.sleep!=null?r.sleep+" h":"–", "7 or more hours is the target")}
     ${row("Check-in", last.energy!=null?`Energy ${last.energy} · Soreness ${last.soreness!=null?last.soreness:"–"}`:(y.energy!=null?`Yesterday: energy ${y.energy} · soreness ${y.soreness!=null?y.soreness:"–"}`:"None yet"), "")}
     </div>
-    <div class="cap" style="padding-top:18px">How it decides</div><div class="group"><p class="para">Rest or very easy when soreness is 7 or more, or when HRV is 15% or more under your two-week baseline while resting HR is up and you feel low. Take it easy when energy is low two days running, HRV is 10% under baseline, resting HR is up 3 or more, sleep was under 6 hours, or soreness is 5 or more. Otherwise, go as planned. The nightly coach applies the same rules to the plan; this is your morning read on them.</p></div></div>`); }
+    <div class="cap" style="padding-top:18px">How it decides</div><div class="group"><p class="para">Rest or very easy when soreness is 7 or more, or when HRV is 15% or more under your two-week baseline while resting HR is up and you feel low. Take it easy when energy is low two days running, HRV is 10% under baseline, resting HR is up 3 or more, sleep was under 6 hours, or soreness is 5 or more. Otherwise, go as planned. The coach applies the same rules at its 9 AM review; this is your own read on them.</p></div></div>`); }
 function viewToday(){
   const t=todayISO(), d=selDay||t, m=monday(t), wk=weekDays(m);
   const planMi=sum(wk.map(x=>x.p&&x.p.run?x.p.run.miles:0)), actMi=sum(weekRuns(m).map(r=>r.miles));
@@ -853,7 +853,7 @@ function progRow(w, label, sub){ const mt=monday(todayISO()), now=w.start===mt, 
 function viewProgram(){
   const pr=S.program, pw=planWeeks();
   if(!pr){ const soFar=pw.map(w=>progRow(w, `Week of ${shortDate(w.start)}`, [w.long?`Long run ${w.long} mi`:"", w.lifts?`${w.lifts} lifts`:""].filter(Boolean).join(" · ")||"Rest week")).join("");
-    return `<div class="callout"><div class="h">${ICON.run} Your program</div><p>Phase 1 ramps to 25 miles a week by Dec 21 with every run easy, then the 18-week Advanced Marathoning plan starts Dec 28. The coach writes the full week-by-week program at its next midnight review, and it shows here.</p></div>
+    return `<div class="callout"><div class="h">${ICON.run} Your program</div><p>Phase 1 ramps to 25 miles a week by Dec 21 with every run easy, then the 18-week Advanced Marathoning plan starts Dec 28. The coach writes the full week-by-week program at its next 9 AM review, and it shows here.</p></div>
     <div class="sec"><div class="sec-h"><h2>Planned So Far</h2></div><div class="group">${soFar||'<div class="empty">No weeks planned yet.</div>'}</div><div class="foot">Ran / planned miles for past and current weeks. Tap a week for its days.</div></div>`; }
   const p1=pr.phase1||{}, p2=pr.phase2||{};
   const rows1=((p1.weeks)||[]).map(w=>progRow(w, `Week of ${shortDate(w.start)}`, w.long?`Long run ${w.long} mi`:"Easy week")).join("");
@@ -900,7 +900,7 @@ function viewLifts(){
 /* ---------- You ---------- */
 function ago(iso){ const ms=Date.now()-new Date(iso).getTime(); if(!(ms>=0)) return ""; const m=Math.round(ms/60000); if(m<60) return m<=1?"just now":m+" min ago"; const h=Math.round(m/60); if(h<36) return h+" h ago"; return Math.round(h/24)+" days ago"; }
 let pushSt="";
-function pushLabel(){ return {on:"On · nightly summary and coach replies", off:"Off · tap to turn on", denied:"Blocked in iOS Settings for Healthspan", unsupported:(FP.standalone&&FP.standalone())?"Needs iOS 16.4 or later":"Add to Home Screen, then turn on"}[pushSt]||"Checking…"; }
+function pushLabel(){ return {on:"On · coach replies and anything that needs you", off:"Off · tap to turn on", denied:"Blocked in iOS Settings for Healthspan", unsupported:(FP.standalone&&FP.standalone())?"Needs iOS 16.4 or later":"Add to Home Screen, then turn on"}[pushSt]||"Checking…"; }
 async function refreshPush(){ try{ pushSt=FP.pushState?await FP.pushState():"unsupported"; }catch(_){ pushSt="unsupported"; } const el=$("#pushS"); if(el) el.textContent=pushLabel(); }
 async function pushToggle(){ const st=FP.pushState?await FP.pushState():"unsupported";
   if(st==="unsupported"){ toast((FP.standalone&&FP.standalone())?"Notifications need iOS 16.4 or later":"Add Healthspan to your Home Screen first"); return; }
@@ -917,7 +917,7 @@ async function watchSheet(){
     <li>Period: since last sync. Turn on automatic runs.</li></ol></div>
     <div class="cap" style="padding-top:18px">Your URL</div><div class="group"><p class="para" id="haeUrl" style="font:13px/1.5 var(--mono);word-break:break-all;color:var(--label-2)">Loading…</p></div>
     <div style="margin-top:12px"><button class="btn-big sec2" type="button" data-act="copyurl">Copy URL</button></div>
-    <div class="foot">The URL carries your private import key. Until this is set up, the nightly coach imports from your Drive folder.</div></div>`);
+    <div class="foot">The URL carries your private import key. Until this is set up, the coach imports from your Drive folder at its 9 AM review.</div></div>`);
   try{ const k=FP.rpc?await FP.rpc("fp_owner_secret",{n:"hae_key"}):null; const el=$("#haeUrl"); if(el) el.textContent=k?`https://jpfvrrdxulcawectrozo.supabase.co/functions/v1/hae?k=${k}`:"Key not available yet. The database setup step has not run."; }catch(_){ const el=$("#haeUrl"); if(el) el.textContent="Key not available yet. The database setup step has not run."; }
 }
 function viewYou(){
@@ -1040,7 +1040,7 @@ function runSheet(day){
     <div class="row"><div class="main"><div class="t">Warm-up</div></div><div class="v">${/time trial/i.test(p.run.label||"")?"15 to 20 min":"5 min"}</div></div></div>
     <div class="sec"><div class="cap">Details</div><div class="group"><p class="para">${esc(p.run.detail||"")}</p></div></div>
     <div class="sec"><div class="cap">Warm-up</div><div class="group"><ol class="steps">${warmList(p).map(([,n,d])=>`<li>${esc(n)}, ${esc(d)}</li>`).join("")}</ol></div></div>
-    <div class="sec"><div class="foot" style="padding-top:0">Your watch run imports tonight. Use + to add it by hand only if it doesn't.</div></div></div>`);
+    <div class="sec"><div class="foot" style="padding-top:0">Your watch run syncs in minutes once Watch sync is on. Use + only if it never shows up.</div></div></div>`);
 }
 function runDetail(id){ const r=S.runs.find(x=>x.id===id); if(!r) return; const st=settings(), p=S.plan[r.date]||{}, g=r.shoe?gearItems().find(x=>x.id===r.shoe):gearItems().find(x=>x.default&&(!x.since||x.since<=r.date));
   const row=(k,v,c)=>`<div class="row"><div class="main"><div class="t">${k}</div></div><div class="v"${c?` style="color:${c}"`:""}>${v}</div></div>`;
@@ -1069,7 +1069,7 @@ function reqForm(pre, keep){
     <textarea class="ta" id="reqText" placeholder="${k==="pt"?"What your PT changed. You can also just attach the photo or PDF.":"Anything you want adjusted: an exercise, a day, how a run felt, a goal."}" aria-label="Request">${esc(reqDraft.text||"")}</textarea>
     ${assets?`<div style="margin-top:12px"><button class="btn-big sec2" type="button" data-act="attach">Attach Photo or PDF</button></div>`:`<div class="foot">Attachments aren't available in this view.</div>`}
     <div class="att" id="attList">${attHtml()}</div>
-    <div class="foot">Reviewed tonight at midnight. Big changes get flagged for chat.</div></div>`);
+    <div class="foot">Reviewed each morning at 9. Big changes get flagged for chat.</div></div>`);
 }
 function attHtml(){ return reqDraft.files.map((f,i)=>`<div class="a">${f.uploading?"Uploading…":/^image\//.test(f.type)?`<img src="${esc(FP.blobSrc(f.id))}" alt="${esc(f.name)}">`:"PDF<br>"+esc(f.name)}<button type="button" class="x" data-act="attdel" data-i="${i}" aria-label="Remove ${esc(f.name)}">×</button></div>`).join(""); }
 async function toJpeg(file){
@@ -1099,11 +1099,11 @@ async function saveReq(){
   const reading=reqDraft.files.filter(f=>f.ocr).map(f=>f.ocr);
   if(reading.length){ toast("Reading your attachment…"); await Promise.race([Promise.all(reading), new Promise(r=>setTimeout(r,45000))]); }
   const id=Date.now().toString(36);
-  await save(db.collection("requests").doc(id), {created:new Date().toISOString(), text: text || (reqDraft.kind==="pt"?"New PT plan attached":"See attachment"), kind:reqDraft.kind, status:"pending", reply:"", attachments:reqDraft.files.map(f=>({id:f.id, name:f.name, type:f.type, text:f.text||""}))}, "Sent. Reviewed tonight.");
+  await save(db.collection("requests").doc(id), {created:new Date().toISOString(), text: text || (reqDraft.kind==="pt"?"New PT plan attached":"See attachment"), kind:reqDraft.kind, status:"pending", reply:"", attachments:reqDraft.files.map(f=>({id:f.id, name:f.name, type:f.type, text:f.text||""}))}, "Sent. Reviewed at 9 AM.");
   reqDraft={kind:"change", files:[]};
 }
 function reqSheet(id){ const r=S.requests.find(x=>x.id===id); if(!r) return;
-  openSheet(navBar(navBtn("close","Close"),r.kind==="pt"?"PT Update":r.kind==="app"?"App Change":"Change Request","")+`<div class="sh-body"><div class="cap caprow" style="padding-top:0"><span>Coach${r.resolvedAt?" · "+esc(shortDate(r.resolvedAt)):""}</span>${statusPill(r.status)}</div><div class="group reply${r.reply?"":" wait"}"><p class="para">${esc(r.reply||"Waiting for tonight's review. The coach reads requests at midnight Eastern and replies here.")}</p></div>
+  openSheet(navBar(navBtn("close","Close"),r.kind==="pt"?"PT Update":r.kind==="app"?"App Change":"Change Request","")+`<div class="sh-body"><div class="cap caprow" style="padding-top:0"><span>Coach${r.resolvedAt?" · "+esc(shortDate(r.resolvedAt)):""}</span>${statusPill(r.status)}</div><div class="group reply${r.reply?"":" wait"}"><p class="para">${esc(r.reply||"Waiting for the next review. The coach reads requests at 9 AM Eastern and replies here.")}</p></div>
     <div class="cap caprow"><span>You · ${esc(shortDate(String(r.created).slice(0,10)))}</span></div><div class="group"><p class="para">${esc(r.text)}</p></div>
     ${(r.attachments||[]).length?`<div class="att">${r.attachments.map(a=>/^image\//.test(a.type)?`<a class="a" href="${esc(FP.blobSrc(a.id))}" target="_blank" rel="noopener"><img src="${esc(FP.blobSrc(a.id))}" alt="${esc(a.name)}"></a>`:`<a class="a" href="${esc(FP.blobSrc(a.id))}" target="_blank" rel="noopener" style="color:var(--tint)">Open PDF<br>${esc(a.name)}</a>`).join("")}</div>`:""}
     </div>`); }
@@ -1441,7 +1441,7 @@ function swapSheet(ei){ const ex=W.exercises[ei]; const base=S.loads.find(l=>l.i
   sh.innerHTML = navBar(`<button class="nav-btn" type="button" data-w="peekclose">Back</button>`, "Swap Exercise", "") + `<div class="sh-body">
     <div class="hero"><div class="big">${esc(ex.name)}</div><div class="pills"><span class="pill">${esc(ex.target||"")}</span>${base.pt?'<span class="pill tint">PT plan</span>':""}</div></div>
     <div class="cap">Same job, different equipment</div><div class="group">${wAlt.length?altRows(wAlt,"swappick"):'<div class="empty">No standard swaps for this one. Add a different exercise instead.</div>'}</div>
-    <div class="group" style="margin-top:12px"><label class="row" style="cursor:pointer"><div class="main"><div class="t">Keep this swap going forward</div><div class="s">Sent as a request for tonight's review</div></div><input type="checkbox" id="swPerm" style="width:22px;height:22px;accent-color:var(--tint)"></label></div>
+    <div class="group" style="margin-top:12px"><label class="row" style="cursor:pointer"><div class="main"><div class="t">Keep this swap going forward</div><div class="s">Sent as a request for the 9 AM review</div></div><input type="checkbox" id="swPerm" style="width:22px;height:22px;accent-color:var(--tint)"></label></div>
     ${base.pt?'<div class="foot">This one is from your PT plan. Swap only if the equipment is missing, and keep the same holds.</div>':""}
     <div class="sec"><button class="btn-big sec2" type="button" data-w="rmex" style="color:var(--bad)">Remove from today</button></div></div>`;
   sh.scrollTop=0; }
@@ -1460,7 +1460,7 @@ function addSheet(){ wPeek=true; const have=new Set(W.exercises.map(e=>patOf(S.l
     <div class="cap" style="margin-top:22px">Your own</div><div class="group"><div class="frow"><input id="axName" placeholder="Exercise name" aria-label="Exercise name" style="flex:1;text-align:left;color:var(--label)"></div>
     <div class="frow"><label for="axLoad">Weight</label><input id="axLoad" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="35s, 35/15, Band"></div><div class="frow"><label for="axScheme">Sets x reps</label><input id="axScheme" placeholder="3 x 10" value="3 x 10"></div></div>
     <div style="margin-top:12px"><button class="btn-big" type="button" data-w="addcustom">Add to Workout</button></div>
-    <div class="foot">Added exercises are logged with today's session so the nightly review sees them.</div></div>`; sh.scrollTop=0; }
+    <div class="foot">Added exercises are logged with today's session so the morning review sees them.</div></div>`; sh.scrollTop=0; }
 function addEx(a){ W.exercises.push(buildEx("x-"+Date.now().toString(36), a.name, a.load, a.scheme, {added:true})); wPeek=false; persistWorkout(); renderWorkout();
   const nb=sh.querySelector(".sh-body"); if(nb) nb.scrollTop=nb.scrollHeight; toast(a.name+" added"); }
 
@@ -1525,7 +1525,7 @@ function viewHealth(){
     chart(wtS,"Weight, last 90 days","var(--bod)",false,1),
     "Daily steps are linked to lower mortality, leveling off around 8,000 to 10,000 a day for adults under 60 (Paluch et al., Lancet Public Health, 2022).");
   const noWatch=!Object.values(S.daily).some(d=>d.rhr!=null||d.hrv!=null||d.sleep!=null||d.vo2!=null);
-  const banner=noWatch?`<div class="callout" style="margin-top:4px"><div class="h">${ICON.heart} Waiting on your watch</div><p>Resting HR, HRV, sleep, VO2 max and steps arrive with the nightly sync from Health Auto Export. Trends appear after about two weeks.</p></div>`:"";
+  const banner=noWatch?`<div class="callout" style="margin-top:4px"><div class="h">${ICON.heart} Waiting on your watch</div><p>Resting HR, HRV, sleep, VO2 max and steps arrive from Health Auto Export through Watch sync in Settings. Trends appear after about two weeks.</p></div>`:"";
   return `<h1 class="large">Health</h1><div class="sub">Long-term trends from your watch and training${S.import&&S.import.lastAt?` · synced ${esc(ago(S.import.lastAt))}`:""}</div>${banner}${heart}${rec}${str}${body}
   <div class="foot" style="padding-top:14px">Status compares the last 2 weeks with the 6 weeks before. Trends, not a diagnosis.</div>`;
 }
@@ -1591,7 +1591,7 @@ document.addEventListener("click", e=>{
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),
     goal:()=>goalSheet(a.dataset.i), goalsave:()=>saveGoal(a.dataset.i), goaldel:()=>saveGoal(a.dataset.i,true),
     daysheet:()=>daySheet(a.dataset.d), ptedit:()=>{ if(dlg.open) draftClear(); ptEditSheet(); }, ptitem:()=>ptItemSheet(a.dataset.i), ptitemsave:()=>ptItemSave(a.dataset.i), ptitemdel:()=>ptItemSave(a.dataset.i,true), ptex:()=>ptExSheet(a.dataset.id), ptexsave:()=>ptExSave(a.dataset.id), ptexdel:()=>ptExSave(a.dataset.id,true), ptinc:()=>ptInc(a.dataset.id), sugadd:()=>sugAct(a.dataset.id,true), sugno:()=>sugAct(a.dataset.id,false),
-    altreq:()=>{ const x=exAlt[+a.dataset.k]; if(!x||!exAltFor) return; save(db.collection("requests").doc(Date.now().toString(36)), {created:new Date().toISOString(), kind:"change", status:"pending", reply:"", attachments:[], text:`Swap ${exAltFor.name} for ${x.name} going forward (${x.load} · ${x.scheme}). Equipment.`}, "Swap requested. Reviewed tonight."); },
+    altreq:()=>{ const x=exAlt[+a.dataset.k]; if(!x||!exAltFor) return; save(db.collection("requests").doc(Date.now().toString(36)), {created:new Date().toISOString(), kind:"change", status:"pending", reply:"", attachments:[], text:`Swap ${exAltFor.name} for ${x.name} going forward (${x.load} · ${x.scheme}). Equipment.`}, "Swap requested. Reviewed at 9 AM."); },
     signout:()=>FP.signOut(), liftsheet:()=>liftSheet(a.dataset.day, a.dataset.view==="1"), workout:()=>startWorkout(a.dataset.day||"A")}[act]||(()=>{}))();
 });
 $("#fileIn").addEventListener("change",e=>{ const fs=[...e.target.files]; e.target.value=""; if(fs.length&&assets) addFiles(fs); });
@@ -1634,6 +1634,6 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.08.2234";</script>
+<script>window.FP_VERSION="2026.11.08.2259";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>
