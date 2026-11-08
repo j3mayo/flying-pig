@@ -241,6 +241,19 @@ for(const scheme of ['light','dark']){
  await pg.tap('.tab[data-tab="plan"]');await W(150);await pg.tap('[data-pseg="lifts"]');await W(150);await pg.tap('[data-lday="B"]');await W(100);await pg.tap('[data-act="workout"][data-day="B"]');await W(400);
  await pg.tap('[data-w="discard"]');await W(150);ok(P+'discard asks for a second tap',(await pg.textContent('[data-w="discard"]')).includes('Tap again'));
  await pg.tap('[data-w="discard"]');await W(400);ok(P+'discard removes the session',await pg.evaluate(()=>!Object.values(__store).some(v=>v&&v.status==='in_progress'&&v.exercises))&&!(await pg.evaluate(()=>document.getElementById('dlg').open)));
+ // native polish pass: in-flow check-in, collapsing nav, two-state tab glyphs, one radius, folded citations, full-width titles
+ await pg.tap('.tab[data-tab="today"]');await W(250);
+ ok(P+'check-in button sits in the page, not floating',await pg.$eval('.ckin',e=>getComputedStyle(e).position!=='fixed'));
+ ok(P+'plan update row is not covered by the check-in button',await pg.evaluate(()=>{const u=document.querySelector('[data-act="updates"]'),c=document.querySelector('.ckin');if(!u||!c)return false;const a=u.getBoundingClientRect(),b=c.getBoundingClientRect();return a.bottom<=b.top||b.bottom<=a.top;}));
+ ok(P+'week arrows live in the week card',(await pg.$$('.wkc .wkb[aria-label="Previous week"], .wkc .wkb[aria-label="Next week"]')).length===2);
+ ok(P+'active tab shows its filled glyph',await pg.evaluate(()=>{const on=document.querySelector('.tab[aria-current="page"] svg .f'),off=document.querySelector('.tab:not([aria-current="page"]) svg .f');return !!on&&getComputedStyle(on).display!=='none'&&!!off&&getComputedStyle(off).display==='none';}));
+ ok(P+'cards share one radius',await pg.$$eval('.group, .tlc, .r3, .wkc',x=>x.length>3&&x.every(e=>getComputedStyle(e).borderRadius==='14px')));
+ await pg.tap('.tab[data-tab="health"]');await W(300);
+ ok(P+'nav bar is clear at the top and collapses on scroll',!(await pg.$('#nav.scrolled'))&&await pg.evaluate(async()=>{window.scrollTo(0,300);await new Promise(r=>setTimeout(r,250));return document.getElementById('nav').classList.contains('scrolled');}));
+ await pg.evaluate(()=>window.scrollTo(0,0));await W(200);
+ ok(P+'health citations fold behind Why it matters',(await pg.$$('details.why-d:not([open])')).length===4&&(await pg.$$eval('.pillar .why',x=>x.filter(e=>/\(\w.*\d{4}\)/.test(e.textContent)).length))===4);
+ await pg.tap('.tab[data-tab="you"]');await W(250);
+ ok(P+'milestone titles are not cut short',await pg.$$eval('#view .ms-row .t',x=>x.length>=3&&x.every(e=>e.scrollWidth<=e.clientWidth+1)));
  for(const t of ['today','plan','health','you']){await pg.tap(`.tab[data-tab="${t}"]`);await W(150);if(await pg.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth))ok(P+t+' no sideways scroll',false);}
  ok(P+'no sideways scroll on any tab',true);
  ok(P+'no script errors',errs.length===0,errs.join('|'));await ctx.close();}
