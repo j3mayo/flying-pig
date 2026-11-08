@@ -68,7 +68,13 @@ for(const scheme of ['light','dark']){
  ok(P+'week arrows move a week',(await pg.getAttribute('.wd.on','data-sday'))===nextWk&&(await pg.$$('.wd')).length===7);
  const vw=await pg.$('.tlc [data-act="liftsheet"][data-view="1"]');if(vw){await vw.tap();await W(250);ok(P+'viewing a future lift has no Start button',!(await pg.$('.sh [data-act="workout"]')));await pg.tap('.sh [data-act="close"]');await W(200);}
  await pg.tap('.lnk.back');await W(250);
- await pg.tap('.tlc [data-act="logrun"]');await W(250);ok(P+'Log Run opens the run form for that day',(await pg.inputValue('#rDate'))===tday&&(await pg.inputValue('#rMi'))==='3');await pg.tap('.sh [data-act="close"]');await W(200);
+ await pg.tap('.tlc [data-act="logrun"]');await W(250);ok(P+'Log Run opens the run form for that day',(await pg.inputValue('#rDate'))===tday&&(await pg.inputValue('#rMi'))==='3');
+ ok(P+'run form offers a one-tap watch fill',!!(await pg.$('[data-act="runquick"]')));await pg.tap('[data-act="runquick"]');await W(400);
+ const qr=await pg.evaluate(t=>Object.entries(__store).find(([k,v])=>k.startsWith('runs/')&&v&&v.date===t&&v.awaitWatch),tday);
+ ok(P+'quick log saves the planned miles and waits for the watch',!!qr&&qr[1].miles===3&&qr[1].timeSec===null&&!(await pg.evaluate(()=>document.getElementById('dlg').open)),JSON.stringify(qr&&qr[1]));
+ await pg.tap('.tab[data-tab="plan"]');await W(200);await pg.tap('[data-pseg="runs"]');await W(250);
+ ok(P+'run list shows the waiting state',(await pg.textContent('#view')).includes('waiting for the watch'));
+ await pg.evaluate(k=>{delete __store[k];__rt({eventType:'DELETE',old:{coll:'runs',id:k.slice(5)}});},qr[0]);await W(300);await pg.tap('[data-pseg="schedule"]');await W(200);await pg.tap('.tab[data-tab="today"]');await W(250);
  // Home PT slot sheet and check-in
  await pg.tap('[data-act="ptslot"][data-slot="am"]');await W(250);
  ok(P+'home PT opens a checklist',(await pg.textContent('.sh-nav .ttl')).startsWith('Morning PT'));

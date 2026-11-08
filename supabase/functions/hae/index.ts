@@ -132,6 +132,18 @@ Deno.serve(async (req: Request) => {
     const plan = planRows.find((p) => p.id === date);
     const planRun = (plan?.data as Record<string, unknown> | undefined)?.run as Record<string, unknown> | undefined;
     const startMin = Number(start.slice(11, 13)) * 60 + Number(start.slice(14, 16));
+    // a run he marked done by hand ("ran it, fill in from my watch"): take the watch numbers wholesale
+    const placeholder = existingRuns.find((r) => {
+      const rd = r.data as Record<string, unknown>;
+      return String(rd.date) === date && rd.awaitWatch === true;
+    });
+    if (placeholder) {
+      const rd = { ...(placeholder.data as Record<string, unknown>) };
+      Object.assign(rd, { miles, timeSec, avgHR, maxHR, elevFt, startedAt: start, awaitWatch: false, source: "watch", filledFrom: "hae" });
+      runUpdates.push({ coll: "runs", id: placeholder.id, data: rd, version: placeholder.version });
+      (placeholder.data as Record<string, unknown>).awaitWatch = false;
+      continue;
+    }
     const twin = existingRuns.find((r) => {
       const rd = r.data as Record<string, unknown>;
       if (String(rd.date) !== date) return false;
