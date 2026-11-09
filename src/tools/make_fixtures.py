@@ -311,11 +311,12 @@ for i in range(-14, 0):
             "hrv": 48,
             "rhr": 58,
             "steps": 9200,
+            "weight": 182.4,
         },
     )
 
 # ---- settings and updates
-row("settings", "main", {"maxHR": 188, "easyCap": 143})
+row("settings", "main", {"maxHR": 188, "easyCap": 143, "ref5k": "24:30"})
 row(
     "settings",
     "goals",

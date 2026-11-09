@@ -28,7 +28,7 @@ for(const scheme of ['light','dark']){
  await pg.addInitScript(()=>{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.clear();localStorage.setItem('mock-sess',JSON.stringify({user:{id:'u1'}}));}});
  await pg.goto('https://app.test/');await W(700);const P=scheme+': ';
  ok(P+'renamed to Healthspan',(await pg.title())==='Healthspan'&&await pg.evaluate(()=>document.querySelector('meta[name=apple-mobile-web-app-title]').content)==='Healthspan');
- ok(P+'four tabs: Today, Plan, Health, You',(await pg.$$eval('.tab',x=>x.map(e=>e.dataset.tab).join(',')))==='today,plan,health,you');
+ ok(P+'five tabs: Today, Plan, Health, Fuel, You',(await pg.$$eval('.tab',x=>x.map(e=>e.dataset.tab).join(',')))==='today,plan,health,fuel,you');
  // Today: timeline with a button per session type
  await pg.screenshot({path:out+'-'+scheme+'-today.png',fullPage:true});
  ok(P+'Today shows race countdown and date',/Race in \d+ days/i.test(await pg.textContent('.tk'))&&/^\w+day, \w{3} \d+$/.test(await pg.textContent('.dt1')),await pg.textContent('.dt1'));
@@ -260,6 +260,16 @@ for(const scheme of ['light','dark']){
  await pg.tap('[data-act="watchsync"]');await W(400);
  ok(P+'watch sync sheet gives the setup steps',(await pg.textContent('.sh-nav .ttl'))==='Watch Sync'&&(await pg.textContent('.sh-body')).includes('REST API')&&!!(await pg.$('#haeUrl')));
  await pg.tap('.sh [data-act="close"]');await W(200);
+ // Paces and Fuel
+ await pg.tap('.tab[data-tab="today"]');await W(250);
+ ok(P+'planned run shows a pace and heart-rate target',/\d{1,2}:\d\d to \d{1,2}:\d\d \/mi · HR/.test(await pg.$$eval('.tlc .s',x=>x.map(e=>e.textContent).join(' | '))),await pg.$$eval('.tlc .s',x=>x.map(e=>e.textContent).join(' | ')));
+ await pg.tap('.tab[data-tab="plan"]');await W(200);await pg.tap('[data-pseg="runs"]');await W(250);
+ ok(P+'Plan > Runs opens with the paces card',(await pg.textContent('[data-act="paces"]')).includes('Marathon pace')&&(await pg.textContent('[data-act="paces"]')).includes('Threshold'));
+ await pg.tap('[data-act="paces"]');await W(300);await pg.fill('#ref5k','23:00');await pg.tap('.sh-nav [data-act="pacesave"]');await W(400);
+ ok(P+'saving a 5K time updates the paces',await pg.evaluate(()=>__store['settings/main'].ref5k==='23:00'));
+ await pg.tap('.tab[data-tab="fuel"]');await W(300);
+ ok(P+'Fuel tab gives carb and protein grams for today',/Carbs[\s\S]*\d+ to \d+ g/.test(await pg.textContent('#view'))&&/Protein/.test(await pg.textContent('#view'))&&(await pg.textContent('#view')).includes('Sources:'));
+ ok(P+'Fuel tab has before, during and after guidance',(await pg.$$eval('.cap',x=>x.map(e=>e.textContent.trim()))).filter(x=>['Before','During','After'].includes(x)).length===3);
  // Readiness verdict, lift color split
  await pg.tap('.tab[data-tab="today"]');await W(250);
  ok(P+'Today opens with a readiness verdict',/^(Go as planned|Take it easy today|Rest or very easy|Readiness unknown)$/.test(await pg.textContent('.ready .t')),await pg.textContent('.ready .t'));
@@ -305,7 +315,7 @@ for(const scheme of ['light','dark']){
  ok(P+'health citations fold behind Why it matters',(await pg.$$('details.why-d:not([open])')).length===4&&(await pg.$$eval('.pillar .why',x=>x.filter(e=>/\(\w.*\d{4}\)/.test(e.textContent)).length))===4);
  await pg.tap('.tab[data-tab="you"]');await W(250);
  ok(P+'milestone titles are not cut short',await pg.$$eval('#view .ms-row .t',x=>x.length>=3&&x.every(e=>e.scrollWidth<=e.clientWidth+1)));
- for(const t of ['today','plan','health','you']){await pg.tap(`.tab[data-tab="${t}"]`);await W(150);if(await pg.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth))ok(P+t+' no sideways scroll',false);}
+ for(const t of ['today','plan','health','fuel','you']){await pg.tap(`.tab[data-tab="${t}"]`);await W(150);if(await pg.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth))ok(P+t+' no sideways scroll',false);}
  ok(P+'no sideways scroll on any tab',true);
  ok(P+'no script errors',errs.length===0,errs.join('|'));await ctx.close();}
 ok('no em dashes',!html.includes('\u2014'));
