@@ -79,10 +79,17 @@ for(const scheme of ['light','dark']){
  // Home PT slot sheet and check-in
  await pg.tap('[data-act="ptslot"][data-slot="am"]');await W(250);
  ok(P+'home PT opens a checklist',(await pg.textContent('.sh-nav .ttl')).startsWith('Morning PT'));
- ok(P+'home PT shows set rows like a workout',(await pg.$$('.sh [data-act="pttick"][data-id="doorway-am"]')).length===5&&(await pg.textContent('.sh .sg.hd')).includes('Hold'));
- for(let i=0;i<5;i++){ await pg.tap(`.sh [data-act="pttick"][data-id="doorway-am"][data-s="${i}"]`);await W(350); }
- ok(P+'ticking every set completes the item',(await pg.textContent('.sh-nav .ttl small')).startsWith('1 of')&&await pg.evaluate(t=>{const d=__store['daily/'+t];return d&&d.pt&&d.pt['doorway-am']===1&&d.ptLog&&d.ptLog['doorway-am'].sets.length===5;},tday));
+ ok(P+'home PT is a one-tap checklist, one row per item',(await pg.$$('.sh .pti[data-act="pttick"]')).length===(await pg.evaluate(()=>__store['settings/ptDaily'].items.filter(x=>(x.slot||'pm')==='am').length))&&!(await pg.$('.sh .sg'))&&(await pg.$$('.sh .pti[data-id="doorway-am"]')).length===1);
+ ok(P+'checkbox is a 28 pt circle inside a 44 pt row',await pg.$eval('.sh .pti[data-id="doorway-am"]',e=>{const b=e.querySelector('.box').getBoundingClientRect();return e.getBoundingClientRect().height>=44&&Math.round(b.width)===28&&getComputedStyle(e.querySelector('.box')).borderRadius==='50%';}));
+ await pg.tap('.sh .pti[data-id="doorway-am"]');await W(350);
+ ok(P+'one tap completes the item and fills the check',(await pg.textContent('.sh-nav .ttl small')).startsWith('1 of')&&await pg.evaluate(t=>{const d=__store['daily/'+t];return d&&d.pt&&d.pt['doorway-am']===1;},tday)&&(await pg.getAttribute('.sh .pti[data-id="doorway-am"]','aria-pressed'))==='true'&&await pg.$eval('.sh .pti[data-id="doorway-am"] .box',e=>getComputedStyle(e).backgroundColor!=='rgba(0, 0, 0, 0)'));
+ await pg.tap('.sh .pti[data-id="doorway-am"]');await W(300);
+ ok(P+'second tap clears it',await pg.evaluate(t=>__store['daily/'+t].pt['doorway-am']===0,tday)&&(await pg.getAttribute('.sh .pti[data-id="doorway-am"]','aria-pressed'))==='false');
+ await pg.tap('.sh [data-act="ptall"]');await W(350);
+ ok(P+'Mark all done completes the slot',await pg.evaluate(t=>{const d=__store['daily/'+t];return __store['settings/ptDaily'].items.filter(x=>(x.slot||'pm')==='am').every(x=>d.pt[x.id]>=(x.target||1));},tday)&&(await pg.textContent('.sh [data-act="ptall"]')).includes('Clear'));
+ await pg.tap('.sh [data-act="ptall"]');await W(300);await pg.tap('.sh .pti[data-id="doorway-am"]');await W(300);
  ok(P+'checking an item updates the sheet',(await pg.textContent('.sh-nav .ttl small')).startsWith('1 of'));
+ ok(P+'checked item strikes through',await pg.$eval('.sh .pti[data-id="doorway-am"] .t',e=>getComputedStyle(e).textDecorationLine.includes('line-through')));
  await pg.tap('.sh [data-act="close"]');await W(200);
  ok(P+'PT ring counts it',(await pg.textContent('.rt >> nth=2')).startsWith('1'));
  ok(P+'PT ring counts days of the week, Monday start',(await pg.textContent('.rt >> nth=2')).includes('PT days /7')&&(await pg.$eval('.wd >> nth=0',e=>e.querySelector('small').textContent))==='M');

@@ -175,7 +175,6 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 .ex-cue{font-size:13px;color:var(--label-2);padding:0 4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sets{background:var(--card);border-radius:var(--r-card);overflow:hidden}
 .sg{display:grid;grid-template-columns:34px minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr) 44px;gap:8px;align-items:center;padding:6px 12px}
-.sg.pt3{grid-template-columns:34px minmax(0,1fr) 44px}
 .ex-h h3.ptn{color:var(--pt)}
 .sg.hd{font-size:11px;font-weight:600;color:var(--label-2);text-transform:uppercase;letter-spacing:.04em;padding-top:10px;padding-bottom:2px}
 .sg .no{font-weight:600;text-align:center;font-variant-numeric:tabular-nums}
@@ -262,6 +261,21 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 @media (max-width:380px){.row.sug{flex-wrap:wrap;row-gap:8px}.row.sug .sugm{flex:1 1 100%}.row.sug .sugbtns{width:100%;justify-content:flex-end}}
 .ptc{flex:none;min-width:52px;height:36px;border-radius:var(--r-pill);border:0;background:var(--fill);color:var(--label-2);font:600 15px var(--font);font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;white-space:nowrap}
 .ptc.full{background:var(--good);color:#fff}.ptc svg{width:18px;height:18px}
+.pti{display:flex;align-items:center;gap:14px;width:100%;min-height:60px;padding:10px 16px;background:none;border:0;color:var(--label);text-align:left;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent}
+.pti + .pti::before{content:"";position:absolute;top:0;left:58px;right:0;height:.5px;background:var(--sep)}
+.pti:active{background:var(--fill)}
+.pti .box{width:28px;height:28px;border-radius:50%;border:2px solid var(--label-3);flex:none;display:grid;place-items:center;color:transparent;transition:background-color .18s,border-color .18s,transform .18s}
+.pti .box svg{width:16px;height:16px}
+.pti:active .box{transform:scale(.88)}
+.pti[aria-pressed="true"] .box{background:var(--pt);border-color:var(--pt);color:#000}
+.pti[aria-pressed="true"] .box svg{animation:pop .3s cubic-bezier(.2,.8,.2,1.25)}
+.pti .main{display:grid;gap:2px;min-width:0}
+.pti .t{font-size:17px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .18s}
+.pti .s{font-size:13px;color:var(--label-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pti[aria-pressed="true"] .t{color:var(--label-2);text-decoration:line-through;text-decoration-color:var(--label-3)}
+.ptall{display:block;width:100%;min-height:48px;margin-top:12px;border:0;border-radius:var(--r-card);background:color-mix(in srgb,var(--pt) 18%,transparent);color:var(--pt);font:600 17px var(--font);cursor:pointer}
+.ptall.undo{background:var(--card);color:var(--label-2);font-weight:500}
+.ptall:active{opacity:.6}
 .ms-when{font-size:13px;color:var(--label-2);white-space:nowrap}
 /* Today */
 .ready{display:flex;align-items:center;gap:12px;margin-top:16px;width:100%;background:var(--card);border-radius:var(--r-card);padding:12px 14px 12px 16px;border:0;text-align:left;color:inherit;cursor:pointer;min-height:66px}
@@ -780,27 +794,21 @@ function viewToday(){
   ${rec.length?`<div class="sec-h" style="margin-top:22px"><h2>Recovery</h2><span class="ms-when">${recDone} of ${rec.length} done</span></div><div class="tl rec">${tlr}</div>`:""}
   ${p.note?`<div class="foot" style="padding:2px 4px 0">${esc(p.note)}</div>`:""}
   ${d===t?`<button class="ckin${checked?" did":""}" type="button" data-act="checkin">${checked?`${CHECK}Checked in`:`<i></i>Check in · 30 sec`}</button>`:""}`; }
-function ptSets(it, log){ const ps=parseScheme(it.dose||""); if(!ps||!ps.sets||!ps.sets.length) return null; const L=log[it.id]||{};
-  return {unit:ps.unit||"", hold:/\b(s|sec|secs|seconds)\b/i.test(ps.sets[0]), sets:ps.sets.map((v,i)=>({v:(L.sets&&L.sets[i]&&L.sets[i].v!=null)?String(L.sets[i].v):v, done:!!(L.sets&&L.sets[i]&&L.sets[i].done)}))}; }
 function ptSlotSheet(slot, day){ const t=day||todayISO(), keep=(sh.querySelector(".sh-body")||{}).scrollTop||0, x=ptSlot(t,slot), got=(S.daily[t]&&S.daily[t].pt)||{}, log=(S.daily[t]&&S.daily[t].ptLog)||{};
-  const card=it=>{ const n=got[it.id]||0, tg=+it.target||1, full=n>=tg, ps=tg===1?ptSets(it,log):null;
-    const head=`<div class="ex-h"><h3 class="ptn">${esc(it.name)}</h3>${ps?`<span class="tg">${esc(it.freq||"")}</span>`:`<button type="button" class="ptc${full?" full":""}" data-act="ptinc" data-id="${esc(it.id)}" aria-label="${esc(it.name)}: ${n} of ${tg}">${full?CHECK:(tg>1?`${n}/${tg}`:"")}</button>`}</div>`;
-    if(!ps) return `<div class="ex">${head}<div class="ex-cue">${esc([it.dose,it.freq].filter(Boolean).join(" · "))}</div></div>`;
-    const done=ps.sets.filter(q=>q.done).length;
-    return `<div class="ex">${head}<div class="ex-cue">${esc(it.dose)}${ps.unit?" "+esc(ps.unit):""}${done?` · ${done} of ${ps.sets.length} done`:""}</div>
-      <div class="sets"><div class="sg pt3 hd"><span style="text-align:center">Set</span><span style="text-align:center">${ps.hold?"Hold":"Reps"}</span><span></span></div>
-      ${ps.sets.map((q,i)=>`<div class="sg pt3${q.done?" done":""}"><span class="no">${i+1}</span><input type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-pt="${esc(it.id)}" data-s="${i}" value="${esc(q.v)}" aria-label="${esc(it.name)} set ${i+1}"><button type="button" class="ck" data-act="pttick" data-id="${esc(it.id)}" data-s="${i}" aria-pressed="${q.done}" aria-label="${esc(it.name)} set ${i+1} done">${CHECK}</button></div>`).join("")}</div></div>`; };
+  const row=it=>{ const tg=+it.target||1, on=(got[it.id]||0)>=tg, sub=[it.dose, it.freq].filter(Boolean).join(" · ");
+    return `<button type="button" class="pti" data-act="pttick" data-id="${esc(it.id)}" aria-pressed="${on}"><span class="box">${CHECK}</span><span class="main"><span class="t">${esc(it.name)}</span>${sub?`<span class="s">${esc(sub)}</span>`:""}</span></button>`; };
   const note=(log.notes&&log.notes[slot])||"";
-  openSheet(navBar(navBtn("close","Done"),`${PT_SLOTS[slot]} PT<small>${x.done} of ${x.items.length} done</small>`,navBtn("ptedit","Edit"))+`<div class="sh-body">${x.items.map(card).join("")||'<div class="group"><div class="empty">Nothing here.</div></div>'}
-    <div class="sets" style="margin-top:4px"><div class="frow"><textarea data-ptnote="${esc(slot)}" placeholder="How it felt, anything that pinched" aria-label="Notes">${esc(note)}</textarea></div></div>
-    <div class="foot">${slot==="pm"?"After your cool-down. ":""}Tick each set as you go; change a hold or rep count if you did something different. Counted items: tap after each round.</div></div>`);
+  openSheet(navBar(navBtn("close","Done"),`${PT_SLOTS[slot]} PT<small>${x.done} of ${x.items.length} done</small>`,navBtn("ptedit","Edit"))+`<div class="sh-body"><div class="group ptl">${x.items.map(row).join("")||'<div class="empty">Nothing here.</div>'}</div>
+    ${x.items.length?`<button type="button" class="ptall${x.all?" undo":""}" data-act="ptall">${x.all?"Clear all":"Mark all done"}</button>`:""}
+    <div class="sets" style="margin-top:12px"><div class="frow"><textarea data-ptnote="${esc(slot)}" placeholder="How it felt, anything that pinched" aria-label="Notes">${esc(note)}</textarea></div></div>
+    <div class="foot">${slot==="pm"?"After your cool-down. ":""}Tap an item when it is done. The dose is a guide; note anything that pinched.</div></div>`);
   sh.dataset.slot=slot; sh.dataset.pdate=t; if(day){ const b=sh.querySelector(".sh-body"); if(b) b.scrollTop=keep; } }
-async function ptTick(id, si){ const t=(dlg.open&&sh.dataset.pdate)||todayISO(), it=((S.ptDaily&&S.ptDaily.items)||[]).find(x=>x.id===id); if(!it) return;
-  const cur=Object.assign({}, S.daily[t]||{}), pt=Object.assign({}, cur.pt||{}), log=Object.assign({}, cur.ptLog||{}), ps=ptSets(it, log); if(!ps) return;
-  sh.querySelectorAll(`input[data-pt="${CSS.escape(id)}"]`).forEach(inp=>{ const k=+inp.dataset.s; if(ps.sets[k]) ps.sets[k].v=inp.value.trim()||ps.sets[k].v; });
-  ps.sets[si].done=!ps.sets[si].done; log[id]={sets:ps.sets.map(q=>({v:q.v, done:q.done}))};
-  const all=ps.sets.every(q=>q.done), tg=+it.target||1; pt[id]=all?tg:0;
-  const p=db.collection("daily").doc(t).set(Object.assign(cur,{date:t, pt, ptLog:log})); if(dlg.open&&sh.dataset.slot) ptSlotSheet(sh.dataset.slot, t); try{ await p; }catch(err){ failed(err); if(dlg.open&&sh.dataset.slot) ptSlotSheet(sh.dataset.slot, t); } }
+async function ptTick(id){ const t=(dlg.open&&sh.dataset.pdate)||todayISO(), it=((S.ptDaily&&S.ptDaily.items)||[]).find(x=>x.id===id); if(!it) return;
+  const cur=Object.assign({}, S.daily[t]||{}), pt=Object.assign({}, cur.pt||{}), tg=+it.target||1; pt[id]=(pt[id]||0)>=tg?0:tg;
+  const p=db.collection("daily").doc(t).set(Object.assign(cur,{date:t, pt})); if(dlg.open&&sh.dataset.slot) ptSlotSheet(sh.dataset.slot, t); try{ await p; }catch(err){ failed(err); if(dlg.open&&sh.dataset.slot) ptSlotSheet(sh.dataset.slot, t); } }
+async function ptAll(){ const t=(dlg.open&&sh.dataset.pdate)||todayISO(), slot=sh.dataset.slot; if(!slot) return; const x=ptSlot(t, slot), cur=Object.assign({}, S.daily[t]||{}), pt=Object.assign({}, cur.pt||{});
+  x.items.forEach(it=>{ pt[it.id]=x.all?0:(+it.target||1); });
+  const p=db.collection("daily").doc(t).set(Object.assign(cur,{date:t, pt})); ptSlotSheet(slot, t); toast(x.all?"Cleared":`${PT_SLOTS[slot]} PT done`); try{ await p; }catch(err){ failed(err); if(dlg.open&&sh.dataset.slot) ptSlotSheet(sh.dataset.slot, t); } }
 async function ptNote(slot, text){ const t=(dlg.open&&sh.dataset.pdate)||todayISO(), cur=Object.assign({}, S.daily[t]||{}), log=Object.assign({}, cur.ptLog||{}); log.notes=Object.assign({}, log.notes||{}, {[slot]:text.trim()});
   try{ await db.collection("daily").doc(t).set(Object.assign(cur,{date:t, ptLog:log})); }catch(err){ failed(err); } }
 function warmSheet(d){ const t=d||todayISO(), w=warmState(t), keep=(dlg.open&&sh.dataset.warm)?(sh.querySelector(".sh-body")||{}).scrollTop||0:0;
@@ -860,8 +868,6 @@ async function ptExSave(id, del){ if(ptBusy) return;
     await db.collection("loads").doc(nid).set(Object.assign({day:"P", order, block:(("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").find(L=>!ses.some(x=>(x.block||"")[0]===L)))||"Z")+"1", pt:true, track:false, rest:60, tempo:"", hold:"", how:[], why:"Added to your PT session."}, upd)); }
   else await db.collection("loads").doc(id).update(upd);
   draftClear(); toast("Saved"); ptEditSheet(); }catch(err){ failed(err); }finally{ ptBusy=false; } }
-async function ptInc(id){ const t=(dlg.open&&sh.dataset.pdate)||todayISO(), it=((S.ptDaily&&S.ptDaily.items)||[]).find(x=>x.id===id); if(!it) return; const cur=Object.assign({}, S.daily[t]||{}), pt=Object.assign({}, cur.pt||{}); const tg=it.target||1;
-  pt[id]=(pt[id]||0)>=tg?0:(pt[id]||0)+1; const p=db.collection("daily").doc(t).set(Object.assign(cur,{date:t, pt})); if(dlg.open&&sh.dataset.slot) ptSlotSheet(sh.dataset.slot, t); try{ await p; }catch(err){ failed(err); if(dlg.open&&sh.dataset.slot) ptSlotSheet(sh.dataset.slot, t); } }
 function shortRun(r){ return (r.label||("Easy "+r.miles+" mi")).replace(/\s*\(long run\)/i," long run").replace(/\s*\(.*?\)\s*/g," ").trim(); }
 let feelDraft = {}; try{ const f=JSON.parse(localStorage.getItem("fp-feel")||"null"); if(f&&f.date===todayISO()) feelDraft=f.v||{}; }catch(_){}
 function feelCard(t){
@@ -959,6 +965,8 @@ function dayLoad(d){ const p=S.plan[d]||{}; const run=p.run&&p.run.miles>0?p.run
   const parts=[run?(k==="long"?`${mi} mi long run`:k==="easy"||k==="rec"?`${mi} mi easy run`:`${mi} mi ${PACE_NAMES[k]||"run"}`.toLowerCase()):"", p.lift?`Day ${p.lift} lift`:"", p.extra?"PT session":"", p.soccer?"soccer":""].filter(Boolean);
   return {level, run, k, mi, lift:!!p.lift, soccer:!!p.soccer, label:parts.join(" + ")||"Rest day", longMin:run?Math.round(mi*((paces()[k]||paces().easy)[1])/60):0}; }
 const FUEL_LEVELS={light:{cho:[3,5], name:"Light day"}, moderate:{cho:[5,7], name:"Moderate day"}, high:{cho:[6,8], name:"Hard day"}};
+const FUEL_FOODS=[["Bagel, plain",55],["Cooked rice, 1 cup",45],["Cooked pasta, 1 cup",43],["Baked potato, medium",37],["Dates, 2 Medjool",36],["Oats, 1/2 cup dry",27],["Banana",27],["Orange juice, 1 cup",26],["Flour tortilla, 8 inch",25],["Apple",25],["Sports drink, 20 oz",34],["Energy gel",22],["Chews, 6 pieces",48],["Pretzels, 1 oz",23],["Honey, 1 tbsp",17],["Bread, 2 slices",30],["Pancakes, 3 small",40],["Greek yogurt, 1 cup",9]];
+const FUEL_DAYS=[{name:"Light (rest or PT)", g:300, meals:"Eggs and 2 toast, apple; chicken salad with a tortilla; salmon, potato and vegetables; yogurt with berries"},{name:"Moderate (lift or easy run)", g:450, meals:"Oats with banana and honey; turkey sandwich and pretzels; stir fry over 1.5 cups rice; yogurt and granola"},{name:"Hard (long run or soccer)", g:600, meals:"Bagel with jam and juice before; gel or chews during; rice bowl after; pasta dinner; dates or a smoothie between"}];
 function viewFuel(){ const t=todayISO(), w=fuelWeight(), kg=KG(w.lb), L=dayLoad(t), lv=FUEL_LEVELS[L.level], fuel=(S.fuel&&S.fuel.notes)||"", pf=(S.plan[t]||{}).fuel||"";
   const g=(a,b)=>`${Math.round(kg*a)} to ${Math.round(kg*b)} g`, pro=g(1.4,1.8), cho=g(lv.cho[0],lv.cho[1]), meal=`${Math.round(kg*0.3)} to ${Math.round(kg*0.4)} g`;
   const during=L.run&&L.longMin>=75?`${L.longMin>=150?"60 to 90":"30 to 60"} g of carbs an hour after the first 45 minutes (gel, chews or sports drink), 400 to 800 ml of fluid an hour to thirst.`:L.soccer?"Water or a sports drink at breaks; 30 to 60 g of carbs over the match if it runs past 75 minutes.":"Water is enough.";
@@ -971,6 +979,10 @@ function viewFuel(){ const t=todayISO(), w=fuelWeight(), kg=KG(w.lb), L=dayLoad(
     <div class="nums"><div class="num"><div class="k">Carbs</div><div class="v">${cho}</div><div class="d">${lv.cho[0]} to ${lv.cho[1]} g per kg</div></div><div class="num"><div class="k">Protein</div><div class="v">${pro}</div><div class="d">1.4 to 1.8 g per kg, ${meal} a meal</div></div><div class="num"><div class="k">Fluids</div><div class="v">To thirst</div><div class="d">Pale yellow urine is the check</div></div><div class="num"><div class="k">Based on</div><div class="v" style="font-size:17px">${esc(w.src)}</div></div></div></div>
   <div class="sec"><div class="sec-h"><h2>Today's timing</h2></div><div class="group"><div class="cap" style="padding-top:12px">Before</div><p class="para">${before}</p><div class="cap">During</div><p class="para">${during}</p><div class="cap">After</div><p class="para">${after}</p></div></div>
   <div class="sec"><div class="sec-h"><h2>This week</h2><span class="ms-when">carb level by day</span></div><div class="wkc" style="margin-top:0"><div class="ws">${wk}</div></div><div class="foot">High on long-run and soccer days, moderate on lift and easy-run days, light on rest and PT days. Carbs drive the running; protein stays steady every day.</div></div>
+  <div class="sec"><div class="sec-h"><h2>What carbs look like</h2><span class="ms-when">grams, roughly</span></div><div class="group fx">${FUEL_FOODS.map(([n,g])=>`<div class="row"><div class="main"><div class="t">${esc(n)}</div></div><span class="v">${g} g</span></div>`).join("")}</div>
+    <div class="foot">A hard day for you is about ${Math.round(kg*lv.cho[1]/50)*50} g: roughly ${Math.round(kg*7/50)} of these portions spread over the day. A light day is about half that.</div></div>
+  <div class="sec"><div class="sec-h"><h2>Day sketches</h2></div><div class="group">${FUEL_DAYS.map(d=>`<div class="para"><b>${esc(d.name)}</b> <span class="ms-when">about ${d.g} g</span><br><span style="color:var(--label-2)">${esc(d.meals)}</span></div>`).join("")}</div>
+    <div class="foot">Sketches for about ${Math.round(w.lb)} lb. Swap in what you like; the carb total is what matters, not the menu.</div></div>
   <div class="sec"><div class="sec-h"><h2>Worth knowing</h2></div><div class="group">
     <p class="para"><b>Race-day breakfast.</b> ${g(1,4)} of carbs 1 to 4 hours before the start, practiced on long-run mornings from January. Nothing new on race day.</p>
     <p class="para"><b>Creatine.</b> 3 to 5 g of creatine monohydrate a day is well supported for strength and recovery and is safe for healthy adults. Optional; expect 1 to 2 lb of water weight.</p>
@@ -1705,11 +1717,11 @@ document.addEventListener("click", e=>{
   if(!db){ toast("Saving isn't available here"); return; }
   ({logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, warmup:()=>warmSheet(a.dataset.d), warmtick:()=>warmTick(a.dataset.id), metric:()=>metricSheet(a.dataset.k), mrange:()=>{ mRange=+a.dataset.n||90; metricSheet(a.dataset.k); }, sug:()=>sugSheet(a.dataset.id), rundetail:()=>runDetail(a.dataset.id), notfeeling:notFeelingSheet, nfsend:sendNotFeeling,
     nfpick:()=>{ nfPick=NF[+a.dataset.i]||""; sh.querySelectorAll('[data-act="nfpick"]').forEach(b=>b.setAttribute("aria-pressed", b===a)); }, ptslot:()=>ptSlotSheet(a.dataset.slot), updates:updList, checkins:checkinList, reqsave:saveReq,
-    pttick:()=>ptTick(a.dataset.id, +a.dataset.s), soccertick:async()=>{ const d=a.dataset.d, cur=Object.assign({}, S.daily[d]||{}); const on=!cur.soccer; const p=db.collection("daily").doc(d).set(Object.assign(cur,{date:d, soccer:on})); toast(on?"Soccer logged":"Soccer unmarked"); try{ await p; }catch(err){ failed(err); } },
+    pttick:()=>ptTick(a.dataset.id), ptall:ptAll, soccertick:async()=>{ const d=a.dataset.d, cur=Object.assign({}, S.daily[d]||{}); const on=!cur.soccer; const p=db.collection("daily").doc(d).set(Object.assign(cur,{date:d, soccer:on})); toast(on?"Soccer logged":"Soccer unmarked"); try{ await p; }catch(err){ failed(err); } },
     runquick:()=>quickRun(a.dataset.d), rundone:()=>quickRun(a.dataset.d),    paces:pacesSheet, pacesave:savePaces, thread:coachThread, threadsend:async()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; await saveReq(); coachThread(); }, ready:readySheet, push:pushToggle, watchsync:watchSheet, copyurl:()=>{ const t=($("#haeUrl")||{}).textContent||""; if(!/^https:/.test(t)){ toast("No URL yet"); return; } (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("Copied"),()=>toast("Couldn't copy")); }, pweek:()=>pweekSheet(a.dataset.w), newreq:()=>reqForm(a.dataset.pre), reqtpl:()=>{ const t=$("#reqText"); if(!t) return; const cur=t.value.trim(); t.value=cur?cur+"\n"+a.dataset.t:a.dataset.t; reqDraft.text=t.value; t.focus(); t.setSelectionRange(t.value.length,t.value.length); }, attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),
     goal:()=>goalSheet(a.dataset.i), goalsave:()=>saveGoal(a.dataset.i), goaldel:()=>saveGoal(a.dataset.i,true),
-    daysheet:()=>daySheet(a.dataset.d), ptedit:()=>{ if(dlg.open) draftClear(); ptEditSheet(); }, ptitem:()=>ptItemSheet(a.dataset.i), ptitemsave:()=>ptItemSave(a.dataset.i), ptitemdel:()=>ptItemSave(a.dataset.i,true), ptex:()=>ptExSheet(a.dataset.id), ptexsave:()=>ptExSave(a.dataset.id), ptexdel:()=>ptExSave(a.dataset.id,true), ptinc:()=>ptInc(a.dataset.id), sugadd:()=>sugAct(a.dataset.id,true), sugno:()=>sugAct(a.dataset.id,false),
+    daysheet:()=>daySheet(a.dataset.d), ptedit:()=>{ if(dlg.open) draftClear(); ptEditSheet(); }, ptitem:()=>ptItemSheet(a.dataset.i), ptitemsave:()=>ptItemSave(a.dataset.i), ptitemdel:()=>ptItemSave(a.dataset.i,true), ptex:()=>ptExSheet(a.dataset.id), ptexsave:()=>ptExSave(a.dataset.id), ptexdel:()=>ptExSave(a.dataset.id,true), sugadd:()=>sugAct(a.dataset.id,true), sugno:()=>sugAct(a.dataset.id,false),
     altreq:()=>{ const x=exAlt[+a.dataset.k]; if(!x||!exAltFor) return; save(db.collection("requests").doc(Date.now().toString(36)), {created:new Date().toISOString(), kind:"change", status:"pending", reply:"", attachments:[], text:`Swap ${exAltFor.name} for ${x.name} going forward (${x.load} · ${x.scheme}). Equipment.`}, "Swap requested. Reviewed at 9 AM."); },
     signout:()=>FP.signOut(), liftsheet:()=>liftSheet(a.dataset.day, a.dataset.view==="1"), workout:()=>startWorkout(a.dataset.day||"A")}[act]||(()=>{}))();
 });
@@ -1754,6 +1766,6 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.09.0106";</script>
+<script>window.FP_VERSION="2026.11.09.0121";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>
