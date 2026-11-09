@@ -61,6 +61,8 @@ for(const scheme of ['light','dark']){
  await pg.setInputFiles('#fileIn',[{name:'pt-plan.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test')},{name:'photo.png',mimeType:'image/png',buffer:fs.readFileSync(path.join(DIR,'../../apple-touch-icon.png'))}]);
  await pg.waitForTimeout(900);ok(scheme+': two attachments uploaded to storage',(await pg.evaluate(()=>__uploads.length))===2&&(await pg.$$('#attList .a')).length===2);
  ok(scheme+': files stored in owner folder',await pg.evaluate(()=>__uploads.every(u=>u.p.startsWith('u1/'))));
+ await pg.tap('#attList [data-act="attdel"] >> nth=-1');await pg.waitForTimeout(200);ok(scheme+': removing an attachment drops it from the draft',(await pg.$$('#attList .a')).length===1);
+ await pg.setInputFiles('#fileIn',[{name:'photo.png',mimeType:'image/png',buffer:fs.readFileSync(path.join(DIR,'../../apple-touch-icon.png'))}]);await pg.waitForTimeout(900);ok(scheme+': an attachment can be added back',(await pg.$$('#attList .a')).length===2);
  await pg.tap('[data-act="reqsave"]');await pg.waitForTimeout(500);
  const req=await pg.evaluate(()=>Object.values(__store).find(v=>v&&v.kind==='pt'&&v.attachments));
  ok(scheme+': PT request saved with text read from PDF and photo',req&&req.attachments.length===2&&req.attachments.some(a=>a.text.includes('Wall slides'))&&req.attachments.some(a=>a.text.includes('Side plank')),JSON.stringify(req&&req.attachments.map(a=>a.text.slice(0,20))));
@@ -69,6 +71,9 @@ for(const scheme of ['light','dark']){
  await pg.tap('[data-act="gear"][data-id="new"]');await pg.waitForTimeout(200);await pg.fill('#gnName','Nike Pegasus 41');await pg.fill('#gnSince','2026-10-20');await pg.fill('#gnBase','10');await pg.tap('[data-act="gearsave"]');await pg.waitForTimeout(300);
  const shoeMi=String(Math.round((10+Object.entries(seed).filter(([k,v])=>k.startsWith('runs/')&&v.date>='2026-10-20'&&!v.shoe).reduce((a,[,v])=>a+(+v.miles||0),0))*10)/10)+' mi';
  ok(scheme+': shoes added with miles counted ('+shoeMi+')',(await pg.$$eval('[data-act="gear"]',x=>x.map(e=>e.textContent))).some(t=>t.includes('Pegasus')&&t.includes(shoeMi)));
+ const gid=await pg.evaluate(()=>{const it=((__store['settings/gear']||{}).items||[]).find(x=>x.name==='Nike Pegasus 41');return it&&it.id;});
+ if(gid){await pg.tap(`[data-act="gear"][data-id="${gid}"]`);await pg.waitForTimeout(250);await pg.tap('[data-act="gearretire"]');await pg.waitForTimeout(300);}
+ ok(scheme+': retiring shoes marks them retired',!!gid&&await pg.evaluate(()=>(__store['settings/gear'].items||[]).some(x=>x.name==='Nike Pegasus 41'&&x.retired)));
  await pg.tap('[data-act="goal"][data-i="new"]');await pg.waitForTimeout(200);await pg.fill('#gT','Sub 4:00 marathon');await pg.tap('[data-act="goalsave"]');await pg.waitForTimeout(300);
  ok(scheme+': goal added',await pg.evaluate(()=>__store['settings/goals'].items.some(i=>i.title==='Sub 4:00 marathon')));
  await pg.evaluate(()=>{window.__failNext=true;});await pg.tap('[data-act="goal"][data-i="new"]');await pg.waitForTimeout(200);await pg.fill('#gT','Should not stick');await pg.tap('[data-act="goalsave"]');await pg.waitForTimeout(300);

@@ -67,6 +67,9 @@ for(const scheme of ['light','dark']){
  const nextWk=await pg.$eval('.wkb[aria-label="Next week"]',e=>e.dataset.sday);await pg.tap('.wkb[aria-label="Next week"]');await W(250);
  ok(P+'week arrows move a week',(await pg.getAttribute('.wd.on','data-sday'))===nextWk&&(await pg.$$('.wd')).length===7);
  const vw=await pg.$('.tlc [data-act="liftsheet"][data-view="1"]');if(vw){await vw.tap();await W(250);ok(P+'viewing a future lift has no Start button',!(await pg.$('.sh [data-act="workout"]')));await pg.tap('.sh [data-act="close"]');await W(200);}
+ let rv=null;for(let i=0;i<7&&!rv;i++){const wds=await pg.$$('.wd');await wds[i].tap();await W(200);rv=await pg.$('.tlc [data-act="runsheet"]');}
+ ok(P+'a future run day offers a preview',!!rv);
+ if(rv){await rv.tap();await W(250);ok(P+'previewing a future run opens its sheet with no Done button',(await pg.evaluate(()=>document.getElementById('dlg').open))&&!(await pg.$('.sh [data-act="rundone"], .sh [data-act="runquick"]'))&&(await pg.textContent('.sh-nav .ttl')).trim().length>0);await pg.tap('.sh [data-act="close"]');await W(200);}
  await pg.tap('.lnk.back');await W(250);
  await pg.tap('#logBtn');await W(250);await pg.tap('.sh [data-act="logrun"]');await W(250);ok(P+'Add Run opens the run form for today',(await pg.inputValue('#rDate'))===tday&&(await pg.inputValue('#rMi'))==='3');
  ok(P+'run form offers a one-tap watch fill',!!(await pg.$('[data-act="runquick"]')));await pg.tap('.sh [data-act="close"]');await W(200);
@@ -214,6 +217,9 @@ for(const scheme of ['light','dark']){
  await pg.check('#swPerm');const rq0=await pg.evaluate(()=>Object.keys(__store).filter(k=>k.startsWith('requests/')).length);
  await pg.tap('[data-w="swappick"] >> nth=0');await W(300);
  ok(P+'swap applied in the workout',(await pg.textContent('.sh-body')).includes('instead of Smith squat'));
+ const nEx=await pg.evaluate(()=>document.querySelectorAll('.sh .ex').length);const rmE=await pg.evaluate(()=>+[...document.querySelectorAll('[data-w="swap"]')].pop().dataset.e);
+ await pg.tap(`[data-w="swap"][data-e="${rmE}"]`);await W(250);await pg.tap('[data-w="rmex"]');await W(300);
+ ok(P+'Remove from today drops the exercise',(await pg.evaluate(()=>document.querySelectorAll('.sh .ex').length))===nEx-1&&(await pg.textContent('.toast')).includes('Removed'));
  ok(P+'"keep going forward" files a request',await pg.evaluate(n=>Object.keys(__store).filter(k=>k.startsWith('requests/')).length===n+1,rq0));
  // add exercise
  await pg.tap('[data-w="addex"]');await W(250);const adds=await pg.$$('[data-w="addpick"]');ok(P+'add-exercise suggestions offered',adds.length>=2,String(adds.length));

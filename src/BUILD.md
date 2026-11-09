@@ -5,6 +5,7 @@
 - `src/pwa/port.py`: builds `src/pwa/app.html` from the two files above (head tags, Supabase wiring, version stamp) and stamps the cache name in `sw.js`.
 - `src/build.sh`: builds, copies to `index.html` at the repo root, syntax-checks, and runs both test suites. Prints `ALL TESTS PASS` or `TESTS FAILED`.
 - `src/pwa/vv2.js`, `src/pwa/vv3.js`: Playwright tests at iPhone size, light and dark. Playwright comes from `package.json` (`npm ci`, then `npx playwright install chromium` once).
+- `src/tools/crawl.js`: taps every visible control on every tab and day, one level into each sheet, and reports script errors (`node src/tools/crawl.js "$PWD" /tmp/crawl`; prints `errors=0 bad=0` when clean). Run it after a UI change that touches many screens; it is not part of `build.sh`.
 - `src/tools/make_fixtures.py`: writes synthetic, non-personal fixtures to `src/export/` (git-ignored). `build.sh` runs it when that folder is missing, so a fresh clone and CI can run the suites. `src/tools/write_fixtures.py` writes real rows exported from Supabase instead, for checking a change against live data.
 
 - `supabase/functions/hae/index.ts`, `supabase/functions/push/index.ts`: Deno edge functions (watch import, web push). Deploy through the Supabase connector or `supabase functions deploy`; both run with `verify_jwt` off and check their own keys. `supabase/migrations/*.sql`: the database side (Vault keys, secret readers, push trigger); apply in the SQL editor.
