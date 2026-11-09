@@ -89,7 +89,7 @@ Deno.serve(async (req: Request) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
       const v = fn(item, units);
       if (v == null) continue;
-      (dailyPatch[d] ||= {})[field] = field === "steps" ? Math.max(Number(dailyPatch[d][field] || 0), v) : v;
+      (dailyPatch[d] ||= {})[field] = field === "steps" ? Number(dailyPatch[d][field] || 0) + v : v; // steps arrive as samples: add them up per day
     }
   }
   const dayIds = Object.keys(dailyPatch);
@@ -101,7 +101,11 @@ Deno.serve(async (req: Request) => {
     const next = { ...cur };
     let changed = false;
     for (const [k, v] of Object.entries(dailyPatch[d])) {
-      if (next[k] == null || next[k] === "") {
+      if (k === "steps") {
+        // partial exports can re-send a day: keep the largest total seen for that day
+        const cur = Number(next[k] || 0);
+        if (Number(v) > cur) { next[k] = v; changed = true; }
+      } else if (next[k] == null || next[k] === "") {
         next[k] = v;
         changed = true;
       }
