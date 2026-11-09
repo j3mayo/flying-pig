@@ -288,7 +288,8 @@ for(const scheme of ['light','dark']){
  // native polish pass: in-flow check-in, collapsing nav, two-state tab glyphs, one radius, folded citations, full-width titles
  await pg.tap('.tab[data-tab="today"]');await W(250);
  ok(P+'check-in button sits in the page, not floating',await pg.$eval('.ckin',e=>getComputedStyle(e).position!=='fixed'));
- ok(P+'plan update row is not covered by the check-in button',await pg.evaluate(()=>{const u=document.querySelector('[data-act="updates"]'),c=document.querySelector('.ckin');if(!u||!c)return false;const a=u.getBoundingClientRect(),b=c.getBoundingClientRect();return a.bottom<=b.top||b.bottom<=a.top;}));
+ ok(P+'Today has no coach-log row',!(await pg.$('#view [data-act="updates"]')));
+ ok(P+'PT lives in its own Recovery section under the training timeline',!!(await pg.$('.tl.rec'))&&(await pg.$$('.tl.rec [data-act="ptslot"], .tl.rec [data-act="workout"][data-day="P"]')).length>=1&&!(await pg.$('.tl:not(.rec) [data-act="ptslot"]'))&&(await pg.textContent('#view')).includes('Recovery'));
  ok(P+'week arrows live in the week card',(await pg.$$('.wkc .wkb[aria-label="Previous week"], .wkc .wkb[aria-label="Next week"]')).length===2);
  ok(P+'active tab shows its filled glyph',await pg.evaluate(()=>{const on=document.querySelector('.tab[aria-current="page"] svg .f'),off=document.querySelector('.tab:not([aria-current="page"]) svg .f');return !!on&&getComputedStyle(on).display!=='none'&&!!off&&getComputedStyle(off).display==='none';}));
  ok(P+'cards share one radius',await pg.$$eval('.group, .tlc, .r3, .wkc',x=>x.length>3&&x.every(e=>getComputedStyle(e).borderRadius==='14px')));

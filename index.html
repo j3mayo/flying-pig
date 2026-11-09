@@ -132,7 +132,7 @@ nav.tabs .in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:re
 dialog{border:0;padding:0;background:var(--bg);color:var(--label);max-width:none;max-height:none}
 dialog::backdrop{background:rgba(0,0,0,.45)}
 dialog.sheet{margin:auto auto 0;width:100%;max-width:560px;border-radius:var(--r-card) var(--r-card) 0 0;max-height:92dvh;overflow:hidden}
-dialog.sheet[open]{animation:shUp .22s cubic-bezier(.2,.8,.2,1)}
+dialog.sheet[open]{animation:shUp .18s cubic-bezier(.2,.8,.2,1)}
 @keyframes shUp{from{transform:translateY(28px);opacity:0}to{transform:none;opacity:1}}
 dialog.full{margin:0;width:100%;height:100%;border-radius:0}
 .sh{display:flex;flex-direction:column;max-height:92dvh}
@@ -280,6 +280,8 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 .wd.on b{background:var(--label);color:var(--bg)}
 .tl{position:relative;margin-top:20px;padding-left:24px}
 .tl::before{content:"";position:absolute;left:7px;top:16px;bottom:16px;width:2px;background:var(--card-2);border-radius:1px}
+.tl.rec{margin-top:0}
+.tl.rec .tlc{min-height:58px;padding-top:10px;padding-bottom:10px}
 .tli{position:relative;margin-bottom:10px}
 .tdot{position:absolute;left:-22px;top:22px;width:12px;height:12px;border-radius:6px;background:var(--c);box-shadow:0 0 0 3px var(--bg)}
 .tlc{background:var(--card);border-radius:var(--r-card);padding:13px 14px 13px 16px;display:flex;align-items:center;gap:12px;min-height:66px}
@@ -291,7 +293,8 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 .tli.next .tlc{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 45%,transparent)}
 .go{flex:none;border:0;border-radius:var(--r-pill);min-height:44px;padding:0 18px;font:700 15px var(--font);cursor:pointer;white-space:nowrap}
 .go.run{background:var(--run);color:#000}.go.lift{background:var(--lift);color:#000}.go.pt{background:var(--pt);color:#000}.go.grey{background:var(--card-2);color:var(--label)}
-.go:active{opacity:.8}
+.go:active,.chip:active,.ck:active,.ptc:active,.sugbtns button:active,.wtool button:active,.ex-h .swap:active,.wkb:active,.wd:active,.tab:active,.seg button:active,.scale button:active,.addset:active,.lnk:active,.nav-btn:active{opacity:.6;transition:opacity .05s}
+.go,.chip,.ck,.ptc,.wd,.tab,.seg button,.scale button,.lnk,.nav-btn{transition:opacity .15s}
 .tl-ok{flex:none;width:28px;height:28px;display:grid;place-items:center}.tl-ok svg{width:22px;height:22px}
 .ckin{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:50px;margin-top:12px;border:0;border-radius:var(--r-card);background:var(--card);color:var(--label);font:600 17px var(--font);cursor:pointer;white-space:nowrap}
 .ckin:active{background:var(--fill)}
@@ -713,9 +716,12 @@ function viewToday(){
   const liftPlan=wk.filter(x=>x.p&&x.p.lift).length, liftsDone=wk.filter(x=>liftDone(x.date)).length, pt=ptToday(t);
   const tile=(v,cap,frac,col)=>`<div class="rt"><svg viewBox="0 0 66 66" aria-hidden="true">${ring(33,28,6,frac,col)}</svg><b>${v}</b><span>${cap}</span></div>`;
   const items=dayItems(d); let nextSet=false;
-  const tl=items.map(x=>{ const next=d===t&&!x.done&&!nextSet&&x.k!=="soc"; if(next) nextSet=true;
+  const isRec=x=>x.k==="home"||x.k==="pt";
+  const card=x=>{ const next=d===t&&!x.done&&!nextSet&&x.k!=="soc"&&!isRec(x); if(next) nextSet=true;
     const lab=x.done?`${x.when} · done`:next?`Up next · ${x.when}`:x.when;
-    return `<div class="tli${x.done?" done":""}${next?" next":""}" style="--c:${KCOL[x.k]}"><i class="tdot"></i><div class="tlc"><div class="main"><div class="k">${esc(lab)}</div><div class="t">${esc(x.title)}</div>${x.sub?`<div class="s">${esc(x.sub)}</div>`:""}</div>${itemBtn(x,d)}</div></div>`; }).join("");
+    const title=x.k==="home"?esc(x.when)+" PT":esc(x.title), klab=x.k==="home"?(x.done?"Done":"Home PT"):esc(lab);
+    return `<div class="tli${x.done?" done":""}${next?" next":""}" style="--c:${KCOL[x.k]}"><i class="tdot"></i><div class="tlc"><div class="main"><div class="k">${klab}</div><div class="t">${title}</div>${x.sub?`<div class="s">${esc(x.sub)}</div>`:""}</div>${itemBtn(x,d)}</div></div>`; };
+  const tl=items.filter(x=>!isRec(x)).map(card).join(""), rec=items.filter(isRec), recDone=rec.filter(x=>x.done).length, tlr=rec.map(card).join("");
   const p=S.plan[d]||{}, fresh=S.updates.filter(u=>u.date>=addDays(t,-1)).length, checked=S.daily[t]&&S.daily[t].energy!=null;
   const pk=Object.keys(S.plan).sort(), start=pk[0]&&pk[0]<t?pk[0]:"2026-10-24", left=daysBetween(t,RACE), fill=Math.max(2,Math.min(100,Math.round(daysBetween(start,t)/Math.max(1,daysBetween(start,RACE))*100)));
   return `<h1 class="large dt1">${esc(longDate(d).replace(/^(\w+), (\w{3})\w* /,"$1, $2 "))}</h1>
@@ -724,8 +730,8 @@ function viewToday(){
   <div class="r3">${tile(r1(actMi),`Miles /${r1(planMi)}`,planMi?actMi/planMi:0,"var(--run)")}${tile(liftsDone,`Lifts /${liftPlan}`,liftPlan?liftsDone/liftPlan:0,"var(--lift)")}${tile(pt.done,`PT /${pt.n}`,pt.n?pt.done/pt.n:0,"var(--pt)")}</div>
   <div class="wkc"><div class="wkh"><span class="cap2">Week of ${esc(shortDate(monday(d)))}</span><span class="wkn"><button class="wkb" type="button" data-sday="${addDays(d,-7)}" aria-label="Previous week">‹</button><button class="wkb" type="button" data-sday="${addDays(d,7)}" aria-label="Next week">›</button></span></div>${weekStrip(monday(d), d)}</div>
   <div class="tl">${tl||`<div class="tli" style="--c:var(--label-3)"><i class="tdot"></i><div class="tlc"><div class="main"><div class="k">Rest day</div><div class="t">Recovery is training too</div></div></div></div>`}</div>
+  ${rec.length?`<div class="sec-h" style="margin-top:22px"><h2>Recovery</h2><span class="ms-when">${recDone} of ${rec.length} done</span></div><div class="tl rec">${tlr}</div>`:""}
   ${p.note?`<div class="foot" style="padding:2px 4px 0">${esc(p.note)}</div>`:""}
-  ${fresh&&d===t?`<div class="group" style="margin-top:12px"><button class="row" type="button" data-act="updates"><span class="ico note">${ICON.note}</span><div class="main"><div class="t">${fresh} plan update${fresh>1?"s":""} from last night</div><div class="s">What the coach changed and why</div></div>${CHEV}</button></div>`:""}
   ${d===t?`<button class="ckin${checked?" did":""}" type="button" data-act="checkin">${checked?`${CHECK}Checked in`:`<i></i>Check in · 30 sec`}</button>`:""}`; }
 function ptSets(it, log){ const ps=parseScheme(it.dose||""); if(!ps||!ps.sets||!ps.sets.length) return null; const L=log[it.id]||{};
   return {unit:ps.unit||"", hold:/\b(s|sec|secs|seconds)\b/i.test(ps.sets[0]), sets:ps.sets.map((v,i)=>({v:(L.sets&&L.sets[i]&&L.sets[i].v!=null)?String(L.sets[i].v):v, done:!!(L.sets&&L.sets[i]&&L.sets[i].done)}))}; }
@@ -747,7 +753,7 @@ async function ptTick(id, si){ const t=(dlg.open&&sh.dataset.pdate)||todayISO(),
   sh.querySelectorAll(`input[data-pt="${CSS.escape(id)}"]`).forEach(inp=>{ const k=+inp.dataset.s; if(ps.sets[k]) ps.sets[k].v=inp.value.trim()||ps.sets[k].v; });
   ps.sets[si].done=!ps.sets[si].done; log[id]={sets:ps.sets.map(q=>({v:q.v, done:q.done}))};
   const all=ps.sets.every(q=>q.done), tg=+it.target||1; pt[id]=all?tg:0;
-  try{ await db.collection("daily").doc(t).set(Object.assign(cur,{date:t, pt, ptLog:log})); }catch(err){ failed(err); } finally{ if(dlg.open&&sh.dataset.slot) ptSlotSheet(sh.dataset.slot, t); } }
+  const p=db.collection("daily").doc(t).set(Object.assign(cur,{date:t, pt, ptLog:log})); if(dlg.open&&sh.dataset.slot) ptSlotSheet(sh.dataset.slot, t); try{ await p; }catch(err){ failed(err); if(dlg.open&&sh.dataset.slot) ptSlotSheet(sh.dataset.slot, t); } }
 async function ptNote(slot, text){ const t=(dlg.open&&sh.dataset.pdate)||todayISO(), cur=Object.assign({}, S.daily[t]||{}), log=Object.assign({}, cur.ptLog||{}); log.notes=Object.assign({}, log.notes||{}, {[slot]:text.trim()});
   try{ await db.collection("daily").doc(t).set(Object.assign(cur,{date:t, ptLog:log})); }catch(err){ failed(err); } }
 function warmSheet(d){ const t=d||todayISO(), w=warmState(t), keep=(dlg.open&&sh.dataset.warm)?(sh.querySelector(".sh-body")||{}).scrollTop||0:0;
@@ -808,7 +814,7 @@ async function ptExSave(id, del){ if(ptBusy) return;
   else await db.collection("loads").doc(id).update(upd);
   draftClear(); toast("Saved"); ptEditSheet(); }catch(err){ failed(err); }finally{ ptBusy=false; } }
 async function ptInc(id){ const t=(dlg.open&&sh.dataset.pdate)||todayISO(), it=((S.ptDaily&&S.ptDaily.items)||[]).find(x=>x.id===id); if(!it) return; const cur=Object.assign({}, S.daily[t]||{}), pt=Object.assign({}, cur.pt||{}); const tg=it.target||1;
-  pt[id]=(pt[id]||0)>=tg?0:(pt[id]||0)+1; try{ await db.collection("daily").doc(t).set(Object.assign(cur,{date:t, pt})); }catch(err){ failed(err); } finally{ if(dlg.open&&sh.dataset.slot) ptSlotSheet(sh.dataset.slot, t); } }
+  pt[id]=(pt[id]||0)>=tg?0:(pt[id]||0)+1; const p=db.collection("daily").doc(t).set(Object.assign(cur,{date:t, pt})); if(dlg.open&&sh.dataset.slot) ptSlotSheet(sh.dataset.slot, t); try{ await p; }catch(err){ failed(err); if(dlg.open&&sh.dataset.slot) ptSlotSheet(sh.dataset.slot, t); } }
 function shortRun(r){ return (r.label||("Easy "+r.miles+" mi")).replace(/\s*\(long run\)/i," long run").replace(/\s*\(.*?\)\s*/g," ").trim(); }
 let feelDraft = {}; try{ const f=JSON.parse(localStorage.getItem("fp-feel")||"null"); if(f&&f.date===todayISO()) feelDraft=f.v||{}; }catch(_){}
 function feelCard(t){
@@ -1178,7 +1184,7 @@ function liftForm(){
 }
 async function save(ref, doc, msg){
   if(!db){ toast("Saving isn't available here"); return; }
-  try{ await ref.set(doc); draftClear(); closeSheet(); toast(msg); }catch(err){ failed(err); }
+  const p=ref.set(doc); draftClear(); closeSheet(); toast(msg); try{ await p; }catch(err){ failed(err); }
 }
 function failed(err){ const c=err&&err.code; toast(c==="invalid_argument"?"You don't have permission to save here":c==="quota_exceeded"?"Storage is full":"Couldn't save. Try again in a moment"); }
 async function saveFeel(){
@@ -1586,7 +1592,7 @@ document.addEventListener("click", e=>{
   if(!db){ toast("Saving isn't available here"); return; }
   ({logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, warmup:()=>warmSheet(a.dataset.d), warmtick:()=>warmTick(a.dataset.id), metric:()=>metricSheet(a.dataset.k), mrange:()=>{ mRange=+a.dataset.n||90; metricSheet(a.dataset.k); }, sug:()=>sugSheet(a.dataset.id), rundetail:()=>runDetail(a.dataset.id), notfeeling:notFeelingSheet, nfsend:sendNotFeeling,
     nfpick:()=>{ nfPick=NF[+a.dataset.i]||""; sh.querySelectorAll('[data-act="nfpick"]').forEach(b=>b.setAttribute("aria-pressed", b===a)); }, ptslot:()=>ptSlotSheet(a.dataset.slot), updates:updList, checkins:checkinList, reqsave:saveReq,
-    pttick:()=>ptTick(a.dataset.id, +a.dataset.s), soccertick:async()=>{ const d=a.dataset.d, cur=Object.assign({}, S.daily[d]||{}); const on=!cur.soccer; try{ await db.collection("daily").doc(d).set(Object.assign(cur,{date:d, soccer:on})); toast(on?"Soccer logged":"Soccer unmarked"); }catch(err){ failed(err); } },
+    pttick:()=>ptTick(a.dataset.id, +a.dataset.s), soccertick:async()=>{ const d=a.dataset.d, cur=Object.assign({}, S.daily[d]||{}); const on=!cur.soccer; const p=db.collection("daily").doc(d).set(Object.assign(cur,{date:d, soccer:on})); toast(on?"Soccer logged":"Soccer unmarked"); try{ await p; }catch(err){ failed(err); } },
     runquick:async()=>{ const d=a.dataset.d, p=S.plan[d]||{}; if(!p.run||!p.run.miles){ toast("No planned run that day"); return; } const def=gearItems().find(g=>g.default&&!g.retired); await save(db.collection("runs").doc(d+"-w"+Math.random().toString(36).slice(2,5)), {date:d, miles:+p.run.miles, timeSec:null, avgHR:null, maxHR:null, long:!!p.run.long, shoe:def?def.id:null, notes:"", source:"manual", awaitWatch:true}, "Marked done. The watch fills in the rest."); closeSheet(); }, ready:readySheet, push:pushToggle, watchsync:watchSheet, copyurl:()=>{ const t=($("#haeUrl")||{}).textContent||""; if(!/^https:/.test(t)){ toast("No URL yet"); return; } (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("Copied"),()=>toast("Couldn't copy")); }, pweek:()=>pweekSheet(a.dataset.w), newreq:()=>reqForm(a.dataset.pre), reqtpl:()=>{ const t=$("#reqText"); if(!t) return; const cur=t.value.trim(); t.value=cur?cur+"\n"+a.dataset.t:a.dataset.t; reqDraft.text=t.value; t.focus(); t.setSelectionRange(t.value.length,t.value.length); }, attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),
     goal:()=>goalSheet(a.dataset.i), goalsave:()=>saveGoal(a.dataset.i), goaldel:()=>saveGoal(a.dataset.i,true),
@@ -1634,6 +1640,6 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.08.2259";</script>
+<script>window.FP_VERSION="2026.11.08.2357";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>
