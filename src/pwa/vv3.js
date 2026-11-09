@@ -84,6 +84,7 @@ for(const scheme of ['light','dark']){
  ok(P+'checking an item updates the sheet',(await pg.textContent('.sh-nav .ttl small')).startsWith('1 of'));
  await pg.tap('.sh [data-act="close"]');await W(200);
  ok(P+'PT ring counts it',(await pg.textContent('.rt >> nth=2')).startsWith('1'));
+ ok(P+'PT ring counts days of the week, Monday start',(await pg.textContent('.rt >> nth=2')).includes('PT days /7')&&(await pg.$eval('.wd >> nth=0',e=>e.querySelector('small').textContent))==='M');
  const hadDot=!!(await pg.$('.ckin i'));await pg.evaluate(t=>{const d=__store['daily/'+t];if(d){delete d.energy;}},tday);
  await pg.tap('.ckin');await W(250);ok(P+'check-in sheet has one Save button',(await pg.$$('.sh [data-act="feelsave"]')).length===1&&!!(await pg.$('.sh-nav [data-act="feelsave"]')));for(const [k,vv] of [['energy',4],['soreness',2],['motivation',4]]) await pg.tap(`.sh [data-feel="${k}"][data-v="${vv}"]`);
  await pg.tap('.sh-nav [data-act="feelsave"]');await W(400);

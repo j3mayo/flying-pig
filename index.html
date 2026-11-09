@@ -642,6 +642,7 @@ const warmList = p => /time trial/i.test((p&&p.run&&p.run.label)||"") ? WARMUP_T
 function warmState(d){ const p=S.plan[d]||{}, list=warmList(p), got=(S.daily[d]&&S.daily[d].warm)||{}; const n=list.filter(([id])=>got[id]).length; return {list, got, n, all:n===list.length}; }
 function ptSlot(d, slot){ const items=((S.ptDaily&&S.ptDaily.items)||[]).filter(x=>(x.slot||"pm")===slot), got=(S.daily[d]&&S.daily[d].pt)||{};
   const done=items.filter(x=>(got[x.id]||0)>=(x.target||1)).length; return {items, done, all:items.length>0&&done===items.length}; }
+function ptWeek(m, t){ const items=(S.ptDaily&&S.ptDaily.items)||[]; let done=0; for(let i=0;i<7;i++){ const d=addDays(m,i); if(d>t) continue; const got=(S.daily[d]&&S.daily[d].pt)||{}; if(items.length&&items.every(x=>(got[x.id]||0)>=(+x.target||1))) done++; } return {n:7, done}; }
 function ptToday(d){ const items=(S.ptDaily&&S.ptDaily.items)||[], got=(S.daily[d]&&S.daily[d].pt)||{}; return {n:items.length, done:items.filter(x=>(got[x.id]||0)>=(x.target||1)).length}; }
 function easyPaceSec(){ const cap=settings().easyCap; const e=[...S.runs].filter(r=>r.avgHR&&r.avgHR<=cap+2&&pace(r)).sort((a,b)=>a.date.localeCompare(b.date)); return e.length?pace(e[e.length-1]):570; }
 /* The day in the order he does it: morning PT, lift (Day C comes before the run), run, PT session, soccer, home PT through the day and evening. */
@@ -713,7 +714,7 @@ function readySheet(){ const t=todayISO(), r=readiness(t), last=S.daily[t]||{}, 
 function viewToday(){
   const t=todayISO(), d=selDay||t, m=monday(t), wk=weekDays(m);
   const planMi=sum(wk.map(x=>x.p&&x.p.run?x.p.run.miles:0)), actMi=sum(weekRuns(m).map(r=>r.miles));
-  const liftPlan=wk.filter(x=>x.p&&x.p.lift).length, liftsDone=wk.filter(x=>liftDone(x.date)).length, pt=ptToday(t);
+  const liftPlan=wk.filter(x=>x.p&&x.p.lift).length, liftsDone=wk.filter(x=>liftDone(x.date)).length, pt=ptWeek(m, t);
   const tile=(v,cap,frac,col)=>`<div class="rt"><svg viewBox="0 0 66 66" aria-hidden="true">${ring(33,28,6,frac,col)}</svg><b>${v}</b><span>${cap}</span></div>`;
   const items=dayItems(d); let nextSet=false;
   const isRec=x=>x.k==="home"||x.k==="pt";
@@ -727,7 +728,7 @@ function viewToday(){
   return `<h1 class="large dt1">${esc(longDate(d).replace(/^(\w+), (\w{3})\w* /,"$1, $2 "))}</h1>
   <div class="cd" role="img" aria-label="${left} days until race day"><div class="cdt"><span class="tk">Race in ${left} days</span>${d!==t?`<button class="lnk back" type="button" data-sday="${t}">Back to today</button>`:`<span class="cdd">${esc(shortDate(RACE))}</span>`}</div><div class="cdb"><i style="width:${fill}%"></i></div></div>
   ${d===t?(()=>{ const r=readiness(t); return `<button class="ready" type="button" data-act="ready" style="--c:${r.c}" aria-label="Readiness: ${esc(r.t)}"><i class="dot"></i><div class="main"><div class="k">Readiness</div><div class="t">${esc(r.t)}</div><div class="s">${esc(r.s)}</div></div>${CHEV}</button>`; })():""}
-  <div class="r3">${tile(r1(actMi),`Miles /${r1(planMi)}`,planMi?actMi/planMi:0,"var(--run)")}${tile(liftsDone,`Lifts /${liftPlan}`,liftPlan?liftsDone/liftPlan:0,"var(--lift)")}${tile(pt.done,`PT /${pt.n}`,pt.n?pt.done/pt.n:0,"var(--pt)")}</div>
+  <div class="r3">${tile(r1(actMi),`Miles /${r1(planMi)}`,planMi?actMi/planMi:0,"var(--run)")}${tile(liftsDone,`Lifts /${liftPlan}`,liftPlan?liftsDone/liftPlan:0,"var(--lift)")}${tile(pt.done,`PT days /${pt.n}`,pt.n?pt.done/pt.n:0,"var(--pt)")}</div>
   <div class="wkc"><div class="wkh"><span class="cap2">Week of ${esc(shortDate(monday(d)))}</span><span class="wkn"><button class="wkb" type="button" data-sday="${addDays(d,-7)}" aria-label="Previous week">‹</button><button class="wkb" type="button" data-sday="${addDays(d,7)}" aria-label="Next week">›</button></span></div>${weekStrip(monday(d), d)}</div>
   <div class="tl">${tl||`<div class="tli" style="--c:var(--label-3)"><i class="tdot"></i><div class="tlc"><div class="main"><div class="k">Rest day</div><div class="t">Recovery is training too</div></div></div></div>`}</div>
   ${rec.length?`<div class="sec-h" style="margin-top:22px"><h2>Recovery</h2><span class="ms-when">${recDone} of ${rec.length} done</span></div><div class="tl rec">${tlr}</div>`:""}
@@ -1640,6 +1641,6 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.08.2357";</script>
+<script>window.FP_VERSION="2026.11.09.0009";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>
