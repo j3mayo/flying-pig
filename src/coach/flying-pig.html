@@ -771,8 +771,9 @@ function viewLifts(){
 const KG=lb=>lb/2.2046;
 function fuelWeight(){ const ds=Object.values(S.daily).filter(d=>d.weight!=null&&d.weight!=="").sort((a,b)=>b.date.localeCompare(a.date)); if(ds.length) return {lb:+ds[0].weight, src:`weight ${ds[0].weight} lb on ${shortDate(ds[0].date)}`}; const st=settings(); if(st.weightLb) return {lb:+st.weightLb, src:`weight ${st.weightLb} lb from Settings`}; return {lb:180, src:"180 lb assumed until a weight is logged"}; }
 function dayLoad(d){ const p=S.plan[d]||{}; const run=p.run&&p.run.miles>0?p.run:null, k=run?runKind(run):null, mi=run?+run.miles:0;
-  const hard=!!run&&(k==="long"||k==="mp"||k==="lt"||k==="vo2"||k==="race"||mi>=8);
-  const level=hard||p.soccer?"high":(run||p.lift)?"moderate":"light";
+  const minutes=run?Math.round(mi*((paces()[k]||paces().easy)[1])/60):0;
+  const hard=!!run&&(minutes>=75||k==="mp"||k==="lt"||k==="vo2"||k==="race"||(p.soccer&&minutes>=30));
+  const level=hard?"high":(run||p.lift||p.soccer)?"moderate":"light";
   const parts=[run?(k==="long"?`${mi} mi long run`:k==="easy"||k==="rec"?`${mi} mi easy run`:`${mi} mi ${PACE_NAMES[k]||"run"}`.toLowerCase()):"", p.lift?`Day ${p.lift} lift`:"", p.extra?"PT session":"", p.soccer?"soccer":""].filter(Boolean);
   return {level, run, k, mi, lift:!!p.lift, soccer:!!p.soccer, label:parts.join(" + ")||"Rest day", longMin:run?Math.round(mi*((paces()[k]||paces().easy)[1])/60):0}; }
 const FUEL_LEVELS={light:{cho:[3,5], name:"Light day"}, moderate:{cho:[5,7], name:"Moderate day"}, high:{cho:[6,8], name:"Hard day"}};
