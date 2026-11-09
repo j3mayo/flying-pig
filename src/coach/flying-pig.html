@@ -3,10 +3,10 @@
 <style>
 /* Layout: iOS-native. Large title that collapses into a translucent bar on scroll, inset grouped lists, two-state tab glyphs, sheets with grabbers. One token scale: radii 10 / 14 / pill, type 11 13 15 17 20 22 28 34. */
 :root{
-  --bg:#0A0B0F; --card:#15171E; --card-2:#22252E; --fill:rgba(140,146,164,.18); --fill-2:rgba(140,146,164,.3);
-  --sep:rgba(140,146,164,.32); --label:#F5F6FA; --label-2:rgba(226,229,240,.64); --label-3:rgba(226,229,240,.34);
-  --tint:#4C8DFF; --tint-2:#7AAAFF; --run:#3DDC84; --lift:#8E8DFF; --pt:#C88BFF; --soc:#FFA62B; --warn:#FFA62B; --bad:#FF5C66; --good:#3DDC84;
-  --bar:rgba(12,13,18,.9); --on-tint:#FFFFFF; --rec:#5DD3FF; --bod:#FFD452;
+  --bg:#0F0C0B; --card:#1B1614; --card-2:#28211E; --fill:rgba(190,160,140,.16); --fill-2:rgba(190,160,140,.28);
+  --sep:rgba(190,160,140,.3); --label:#FAF4EF; --label-2:rgba(240,226,214,.66); --label-3:rgba(240,226,214,.36);
+  --tint:#FF7A45; --tint-2:#FF9E73; --run:#5FE39A; --lift:#5B8DFF; --pt:#FF6B8B; --soc:#FFB648; --warn:#FFB648; --bad:#FF4D5A; --good:#5FE39A;
+  --bar:rgba(16,12,11,.9); --on-tint:#1A0F08; --rec:#6EDCE0; --bod:#FFD774;
   --r-ctl:10px; --r-card:14px; --r-pill:999px;
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
   --font-d:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
@@ -16,7 +16,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{background:var(--bg)}
-body{background:linear-gradient(180deg,#10121A 0,var(--bg) 360px) fixed}
+body{background:linear-gradient(180deg,#181210 0,var(--bg) 360px) fixed}
 body{color:var(--label);font:17px/1.35 var(--font);letter-spacing:-.01em;-webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bar)}
 button{font:inherit;color:inherit;touch-action:manipulation;-webkit-user-select:none;user-select:none}
@@ -537,7 +537,7 @@ function dayItems(d){
   else if(runsOn(d).length){ const rr=runsOn(d); out.push({k:"run", when:"Run", title:`Run · ${r1(sum(rr.map(r=>r.miles)))} mi`, sub:`${fmtPace(pace(tot(rr)))}/mi · HR ${rr[0].avgHR||"–"}`, done:true, runId:rr[0].id}); }
   if(p.extra){ const l=sessOn(d,"P"), n=exFor("P").length;
     out.push({k:"pt", day:"P", when:p.run&&p.run.miles>0?"After the run":"PT session", title:`PT Session${n?" · "+n+" moves":""}`, sub:String(p.extra).replace(/^PT:\s*/,""), done:!!l&&l.status!=="in_progress", open:!!l&&l.status==="in_progress", has:n>0}); }
-  if(p.soccer) out.push({k:"soc", when:"Soccer", title:"Soccer", sub:"Full intensity · counts as a hard day", done:!!(S.daily[d]&&S.daily[d].soccer)});
+  if(p.soccer) out.push({k:"soc", when:"Hard day", title:"Soccer", sub:"Full intensity", done:!!(S.daily[d]&&S.daily[d].soccer)});
   home("day"); home("pm");
   return out; }
 const KCOL={warm:"var(--run)", run:"var(--run)", lift:"var(--lift)", pt:"var(--pt)", home:"var(--pt)", soc:"var(--soc)"};
@@ -1401,7 +1401,7 @@ function daySheet(d){ const p=S.plan[d]||{};
   let h=""; if(p.run&&p.run.miles>0) h+=`<div class="sec"><div class="cap">Run</div><div class="group"><div class="row"><span class="ico run">${ICON.run}</span><div class="main"><div class="t">${esc(shortRun(p.run))}</div></div><div class="v">${esc(p.run.miles)} mi</div></div><p class="para" style="color:var(--label-2)">Target ${esc(runTarget(p.run))}</p>${p.run.detail?`<p class="para">${esc(p.run.detail)}</p>`:""}</div></div>`;
   if(p.lift) h+=`<div class="sec"><div class="cap">Day ${esc(p.lift)} · ${esc(LIFT_NAMES[p.lift]||"")}${p.liftNote?" · "+esc(p.liftNote):""}</div><div class="group">${exFor(p.lift).map(exRow).join("")}</div></div>`;
   if(p.extra) h+=`<div class="sec"><div class="cap">PT</div><div class="group"><div class="row"><span class="ico extra">${ICON.extra}</span><div class="main"><div class="t">${esc(String(p.extra).replace(/^PT:\s*/,""))}</div><div class="s">From your PT plan</div></div></div></div></div>`;
-  if(p.soccer) h+=`<div class="sec"><div class="cap">Soccer</div><div class="group"><div class="row"><span class="ico soc">${ICON.soc}</span><div class="main"><div class="t">Full-intensity soccer</div><div class="s">Counts as a hard day</div></div></div></div></div>`;
+  if(p.soccer) h+=`<div class="sec"><div class="cap">Soccer</div><div class="group"><div class="row"><span class="ico soc">${ICON.soc}</span><div class="main"><div class="t">Full intensity</div><div class="s">Counts as a hard day</div></div></div></div></div>`;
   if(p.note) h+=`<div class="sec"><div class="cap">Note</div><div class="group"><p class="para">${esc(p.note)}</p></div></div>`;
   openSheet(navBar(navBtn("close","Close"), esc(longDate(d))+(p.week!=null?`<small>Week ${esc(p.week)}</small>`:""), "")+`<div class="sh-body">${h||'<div class="group"><div class="empty">Rest day. Recovery is training too.</div></div>'}</div>`); }
 

@@ -34,7 +34,7 @@ A private, single-user training app (running, lifting, physical therapy, health 
 - `settings/main` also holds `ref5k` (mm:ss, the 5K reference the pace targets are predicted from), `maxHR`, `easyCap`, optional `weightLb`. `settings/fuel {notes}` and `plan.fuel` (per day) are coach notes shown on the Fuel tab. `runs.awaitWatch`, `daily.soccer`, `daily.ptLog` are described in the coach prompt.
 
 ## Design rules
-- Dark theme only (deep graphite, not pure black). Five tabs: Today, Plan, Health, Fuel, You. Color only for meaning: run green, lift indigo, PT violet, soccer amber, recovery sky, body gold; blue is for interaction only.
+- Dark theme only (warm near-black, not pure black). Five tabs: Today, Plan, Health, Fuel, You. Color only for meaning: run green, lift blue, PT rose, soccer amber, recovery aqua, body gold; coral (the tint) is for interaction only.
 - Text in buttons, rows, pills and boxes stays on one line (ellipsis, never wrap). Touch targets at least 44 pt. Works at iPhone SE width (320 and 375) and 390.
 - No em dashes anywhere. Health claims in the UI cite peer-reviewed sources only.
 - Number-only boxes use `type="number"` (no `inputmode`, so the keyboard can switch); boxes that take text like `35/15` or `28:44` use `type="text"`.
