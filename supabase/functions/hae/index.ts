@@ -118,7 +118,7 @@ Deno.serve(async (req: Request) => {
   const soccer = workouts.filter((w) => /soccer|football/i.test(String(w.name || "")));
   const runDates = [...new Set(runs.map((w) => localDate(String(w.start || ""))))];
   const existingRuns = (await fetchRows("runs")).filter((r) => runDates.includes(String(r.data.date || "")));
-  const planRows = runDates.length ? await fetchRows("plan", [...runDates, ...soccer.map((w) => localDate(String(w.start || "")))]) : [];
+  const planRows = runDates.length || soccer.length ? await fetchRows("plan", [...runDates, ...soccer.map((w) => localDate(String(w.start || "")))]) : [];
   const runWrites: Row[] = [];
   const runUpdates: Row[] = [];
   for (const w of runs) {
@@ -145,7 +145,7 @@ Deno.serve(async (req: Request) => {
       const rd = { ...(placeholder.data as Record<string, unknown>) };
       Object.assign(rd, { miles, timeSec, avgHR, maxHR, elevFt, startedAt: start, awaitWatch: false, source: "watch", filledFrom: "hae" });
       runUpdates.push({ coll: "runs", id: placeholder.id, data: rd, version: placeholder.version });
-      (placeholder.data as Record<string, unknown>).awaitWatch = false;
+      Object.assign(placeholder.data as Record<string, unknown>, rd); // so a second run that day is matched against the real numbers, not the plan
       continue;
     }
     const twin = existingRuns.find((r) => {

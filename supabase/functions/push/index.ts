@@ -25,7 +25,8 @@ const hash = async (s: string) => {
 };
 async function ensureVapid(): Promise<string> {
   const pub = await secret("vapid_public");
-  if (pub) return pub;
+  const prv = await secret("vapid_private");
+  if (pub && prv) return pub;
   const keys = webpush.generateVAPIDKeys();
   const a = await sb.rpc("fp_set_secret", { n: "vapid_public", v: keys.publicKey });
   const b = await sb.rpc("fp_set_secret", { n: "vapid_private", v: keys.privateKey });

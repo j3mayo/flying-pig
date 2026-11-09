@@ -509,7 +509,7 @@ function paces(){ const st=settings(), ref=refRace(), max=+st.maxHR||188, cap=+s
     hr:{vo2:[Math.round(max*.94),max], lt:[Math.round(max*.86),Math.round(max*.92)], mp:[Math.round(max*.80),Math.round(max*.88)], easy:[0,cap], long:[0,cap+5], rec:[0,cap-10]},
     note:`From ${ref.label}. Easy and long runs stay under heart rate ${cap} whatever the pace says.`}; }
 const PACE_NAMES={rec:"Recovery", easy:"Easy", long:"Long run", mp:"Marathon pace", lt:"Threshold", vo2:"Intervals"};
-function runKind(run){ const t=`${(run&&run.label)||""} ${(run&&run.detail)||""}`.toLowerCase(); if(/time trial|5k race|tune-up|race/.test(t)) return "race"; if(/threshold|\blt\b|tempo/.test(t)) return "lt"; if(/marathon.pace|\bmp\b|dress rehearsal/.test(t)) return "mp"; if(/vo2|interval|\d+\s*[x×]\s*\d+\s*m\b/.test(t)) return "vo2"; if(/recovery/.test(t)) return "rec"; if((run&&run.long)||/long/.test(t)) return "long"; return "easy"; }
+function runKind(run){ const t=`${(run&&run.label)||""} ${(run&&run.detail)||""}`.toLowerCase(); if(/marathon.pace|\bmp\b|dress rehearsal/.test(t)) return "mp"; if(/time trial|5k race|tune-up|\brace\b(?!\s*pace)/.test(t)) return "race"; if(/threshold|\blt\b|tempo/.test(t)) return "lt"; if(/vo2|interval|\d+\s*[x×]\s*\d+\s*m\b/.test(t)) return "vo2"; if(/recovery/.test(t)) return "rec"; if((run&&run.long)||/long/.test(t)) return "long"; return "easy"; }
 const fmtRange=r=>`${fmtPace(Math.round(r[0]))} to ${fmtPace(Math.round(r[1]))}`;
 function hrText(z){ const h=paces().hr[z]; if(!h) return ""; return h[0]?`HR ${h[0]} to ${h[1]}`:`HR under ${h[1]}`; }
 function runTarget(run){ const k=runKind(run); if(k==="race") return "All out, even pacing, no HR cap"; const P=paces(); const r=P[k]||P.easy; return `${fmtRange(r)} /mi · ${hrText(P[k]?k:"easy")}`; }
@@ -522,7 +522,7 @@ function pacesSheet(){ const st=settings(), P=paces();
     <div class="foot">Paces are predicted from the 5K with the Riegel formula (Riegel PS, American Scientist, 1981) and Daniels' training zones; the coach fills the 5K in after the Dec 16 time trial, or type one here.</div>
     <div class="sec">${pacesCard().replace('data-act="paces"','').replace('cursor:pointer','cursor:default')}</div></div>`); }
 async function savePaces(){ const ref5k=($("#ref5k")||{}).value||"", maxHR=+($("#maxHR")||{}).value||188, easyCap=+($("#easyCap")||{}).value||143;
-  if(ref5k&&!toSec(ref5k)){ toast("Enter the 5K like 24:30"); return; }
+  const r5=toSec(ref5k); if(ref5k&&(!r5||r5<12*60||r5>60*60)){ toast("Enter the 5K like 24:30"); return; }
   await save(db.doc("settings/main"), Object.assign({}, S.settings||{}, {ref5k, maxHR, easyCap}), "Paces saved"); }
 function dayItems(d){
   const p=S.plan[d]||{}, out=[], st=settings();
@@ -775,10 +775,10 @@ function viewLifts(){
 }
 
 const KG=lb=>lb/2.2046;
-function fuelWeight(){ const ds=Object.values(S.daily).filter(d=>d.weight!=null&&d.weight!=="").sort((a,b)=>b.date.localeCompare(a.date)); if(ds.length) return {lb:+ds[0].weight, src:`weight ${ds[0].weight} lb on ${shortDate(ds[0].date)}`}; const st=settings(); if(st.weightLb) return {lb:+st.weightLb, src:`weight ${st.weightLb} lb from Settings`}; return {lb:180, src:"180 lb assumed until a weight is logged"}; }
+function fuelWeight(){ const ds=Object.values(S.daily).filter(d=>d&&d.date&&isFinite(+d.weight)&&+d.weight>60).sort((a,b)=>String(b.date).localeCompare(String(a.date))); if(ds.length) return {lb:+ds[0].weight, src:`weight ${ds[0].weight} lb on ${shortDate(ds[0].date)}`}; const st=settings(); if(isFinite(+st.weightLb)&&+st.weightLb>60) return {lb:+st.weightLb, src:`weight ${st.weightLb} lb from Settings`}; return {lb:180, src:"180 lb assumed until a weight is logged"}; }
 function dayLoad(d){ const p=S.plan[d]||{}; const run=p.run&&p.run.miles>0?p.run:null, k=run?runKind(run):null, mi=run?+run.miles:0;
   const minutes=run?Math.round(mi*((paces()[k]||paces().easy)[1])/60):0;
-  const hard=!!run&&(minutes>=75||k==="mp"||k==="lt"||k==="vo2"||k==="race"||(p.soccer&&minutes>=30));
+  const hard=(!!run&&(minutes>=75||k==="mp"||k==="lt"||k==="vo2"||k==="race"))||!!p.soccer;
   const level=hard?"high":(run||p.lift||p.soccer)?"moderate":"light";
   const parts=[run?(k==="long"?`${mi} mi long run`:k==="easy"||k==="rec"?`${mi} mi easy run`:`${mi} mi ${PACE_NAMES[k]||"run"}`.toLowerCase()):"", p.lift?`Day ${p.lift} lift`:"", p.extra?"PT session":"", p.soccer?"soccer":""].filter(Boolean);
   return {level, run, k, mi, lift:!!p.lift, soccer:!!p.soccer, label:parts.join(" + ")||"Rest day", longMin:run?Math.round(mi*((paces()[k]||paces().easy)[1])/60):0}; }
@@ -960,7 +960,9 @@ function runDetail(id){ const r=S.runs.find(x=>x.id===id); if(!r) return; const 
     <div class="hero"><div class="big" style="font-size:44px">${r1(r.miles)}<small style="font-size:20px;color:var(--label-2)"> mi</small></div>${p.run&&p.run.miles?`<div class="pills"><span class="pill ${r.miles>=p.run.miles*.95?"good":"warn"}">Plan ${esc(p.run.miles)} mi</span>${hot?'<span class="pill warn">Above easy HR</span>':r.avgHR?'<span class="pill good">Easy effort</span>':""}</div>`:""}</div>
     ${r.awaitWatch?`<div class="callout" style="margin-bottom:12px"><div class="h">${ICON.run} Waiting for your watch</div><p>Time, pace and heart rate arrive with the next sync. The planned distance is counted now.</p></div>`:""}<div class="group">${r.awaitWatch?"":row("Time",fmtTime(r.timeSec))+row("Pace",fmtPace(pace(r))+" /mi")}${row("Avg heart rate",r.avgHR?r.avgHR+" bpm":"–",hot?"var(--warn)":"")}${row("Max heart rate",r.maxHR?r.maxHR+" bpm":"–")}${r.elevFt!=null?row("Elevation gain",Math.round(r.elevFt)+" ft"):""}${row("Shoes",g?esc(g.name):"–")}</div>
     ${r.notes?`<div class="sec"><div class="cap">Notes</div><div class="group"><p class="para">${esc(r.notes)}</p></div></div>`:""}
-    ${hot?`<div class="foot">Easy runs stay under ${st.easyCap} bpm. Slow down or walk the hills next time.</div>`:""}</div>`); }
+    ${hot?`<div class="foot">Easy runs stay under ${st.easyCap} bpm. Slow down or walk the hills next time.</div>`:""}
+    ${r.awaitWatch?`<div class="sec"><button class="btn-big sec2" type="button" data-act="rundel" data-id="${esc(r.id)}" style="color:var(--bad)">Remove this entry</button></div>`:""}</div>`); }
+async function runDel(id){ closeSheet(); toast("Run removed"); try{ await db.collection("runs").doc(id).delete(); }catch(err){ failed(err); } }
 const NF=["Tired","Sore","Sick","Short on time","Something hurts"];
 let nfPick="";
 function notFeelingSheet(){ nfPick="";
@@ -1047,7 +1049,7 @@ async function saveGoal(i, del){
   await save(db.doc("settings/goals"), Object.assign({}, S.goals||{}, {items, updated:todayISO()}), del?"Goal deleted":"Goal saved");
 }
 const frow=(label,input)=>`<div class="frow"><label>${label}</label>${input}</div>`;
-async function quickRun(d){ const p=S.plan[d]||{}; if(!p.run||!p.run.miles){ toast("No planned run that day"); return; } const def=gearItems().find(g=>g.default&&!g.retired);
+async function quickRun(d){ const p=S.plan[d]||{}; if(!p.run||!p.run.miles){ toast("No planned run that day"); return; } if(S.runs.some(r=>r.date===d&&r.awaitWatch)){ toast("Already marked done"); return; } const def=gearItems().find(g=>g.default&&!g.retired);
   await save(db.collection("runs").doc(d+"-w"+Math.random().toString(36).slice(2,5)), {date:d, miles:+p.run.miles, timeSec:null, avgHR:null, maxHR:null, long:!!p.run.long, shoe:def?def.id:null, notes:"", source:"manual", awaitWatch:true}, "Run done. The watch fills in the rest."); }
 function runForm(day){
   const t=day||todayISO(), p=S.plan[t];
@@ -1532,7 +1534,7 @@ document.addEventListener("click", e=>{
   ({logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, warmup:()=>warmSheet(a.dataset.d), warmtick:()=>warmTick(a.dataset.id), metric:()=>metricSheet(a.dataset.k), mrange:()=>{ mRange=+a.dataset.n||90; metricSheet(a.dataset.k); }, sug:()=>sugSheet(a.dataset.id), rundetail:()=>runDetail(a.dataset.id), notfeeling:notFeelingSheet, nfsend:sendNotFeeling,
     nfpick:()=>{ nfPick=NF[+a.dataset.i]||""; sh.querySelectorAll('[data-act="nfpick"]').forEach(b=>b.setAttribute("aria-pressed", b===a)); }, ptslot:()=>ptSlotSheet(a.dataset.slot), updates:updList, checkins:checkinList, reqsave:saveReq,
     pttick:()=>ptTick(a.dataset.id), ptall:ptAll, soccertick:async()=>{ const d=a.dataset.d, cur=Object.assign({}, S.daily[d]||{}); const on=!cur.soccer; const p=db.collection("daily").doc(d).set(Object.assign(cur,{date:d, soccer:on})); toast(on?"Soccer logged":"Soccer unmarked"); try{ await p; }catch(err){ failed(err); } },
-    runquick:()=>quickRun(a.dataset.d), rundone:()=>quickRun(a.dataset.d),    paces:pacesSheet, pacesave:savePaces, thread:coachThread, threadsend:async()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; await saveReq(); coachThread(); }, ready:readySheet, push:pushToggle, watchsync:watchSheet, copyurl:()=>{ const t=($("#haeUrl")||{}).textContent||""; if(!/^https:/.test(t)){ toast("No URL yet"); return; } (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("Copied"),()=>toast("Couldn't copy")); }, pweek:()=>pweekSheet(a.dataset.w), newreq:()=>reqForm(a.dataset.pre), reqtpl:()=>{ const t=$("#reqText"); if(!t) return; const cur=t.value.trim(); t.value=cur?cur+"\n"+a.dataset.t:a.dataset.t; reqDraft.text=t.value; t.focus(); t.setSelectionRange(t.value.length,t.value.length); }, attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
+    runquick:()=>quickRun(a.dataset.d), rundone:()=>quickRun(a.dataset.d), rundel:()=>runDel(a.dataset.id),    paces:pacesSheet, pacesave:savePaces, thread:coachThread, threadsend:async()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; await saveReq(); coachThread(); }, ready:readySheet, push:pushToggle, watchsync:watchSheet, copyurl:()=>{ const t=($("#haeUrl")||{}).textContent||""; if(!/^https:/.test(t)){ toast("No URL yet"); return; } (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("Copied"),()=>toast("Couldn't copy")); }, pweek:()=>pweekSheet(a.dataset.w), newreq:()=>reqForm(a.dataset.pre), reqtpl:()=>{ const t=$("#reqText"); if(!t) return; const cur=t.value.trim(); t.value=cur?cur+"\n"+a.dataset.t:a.dataset.t; reqDraft.text=t.value; t.focus(); t.setSelectionRange(t.value.length,t.value.length); }, attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),
     goal:()=>goalSheet(a.dataset.i), goalsave:()=>saveGoal(a.dataset.i), goaldel:()=>saveGoal(a.dataset.i,true),
     daysheet:()=>daySheet(a.dataset.d), ptedit:()=>{ if(dlg.open) draftClear(); ptEditSheet(); }, ptitem:()=>ptItemSheet(a.dataset.i), ptitemsave:()=>ptItemSave(a.dataset.i), ptitemdel:()=>ptItemSave(a.dataset.i,true), ptex:()=>ptExSheet(a.dataset.id), ptexsave:()=>ptExSave(a.dataset.id), ptexdel:()=>ptExSave(a.dataset.id,true), sugadd:()=>sugAct(a.dataset.id,true), sugno:()=>sugAct(a.dataset.id,false),

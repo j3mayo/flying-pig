@@ -78,7 +78,16 @@ for(const scheme of ['light','dark']){
  ok(P+'quick log saves the planned miles and waits for the watch',!!qr&&qr[1].miles===3&&qr[1].timeSec===null&&!(await pg.evaluate(()=>document.getElementById('dlg').open)),JSON.stringify(qr&&qr[1]));
  await pg.tap('.tab[data-tab="plan"]');await W(200);await pg.tap('[data-pseg="runs"]');await W(250);
  ok(P+'run list shows the waiting state',(await pg.textContent('#view')).includes('waiting for the watch'));
- await pg.evaluate(k=>{delete __store[k];__rt({eventType:'DELETE',old:{coll:'runs',id:k.slice(5)}});},qr[0]);await W(300);await pg.tap('[data-pseg="schedule"]');await W(200);await pg.tap('.tab[data-tab="today"]');await W(250);
+ await pg.tap('.tab[data-tab="today"]');await W(300);const oneBefore=await pg.evaluate(t=>Object.values(__store).filter(v=>v&&v.date===t&&v.awaitWatch).length,tday);const rd2=await pg.$('.tlc [data-act="rundone"]');if(rd2){await rd2.tap();await W(300);}
+ ok(P+'a second Done does not make a second waiting run',oneBefore===1&&(await pg.evaluate(t=>Object.values(__store).filter(v=>v&&v.date===t&&v.awaitWatch).length,tday))===1);
+ await pg.tap('.tlc [data-act="rundetail"]');await W(300);ok(P+'a waiting run shows what the watch will fill and can be removed',(await pg.textContent('.sh')).includes('Waiting for your watch')&&!!(await pg.$('.sh [data-act="rundel"]')));
+ await pg.tap('.sh [data-act="rundel"]');await W(400);ok(P+'Remove this entry deletes the waiting run and closes the sheet',!(await pg.evaluate(()=>document.getElementById('dlg').open))&&(await pg.evaluate(t=>Object.values(__store).filter(v=>v&&v.date===t&&v.awaitWatch).length,tday))===0&&!!(await pg.$('.tlc [data-act="rundone"]')));
+ const tmr=await pg.evaluate(t=>{const d=new Date(t+'T12:00:00');d.setDate(d.getDate()+1);const k=d.toISOString().slice(0,10);const p=__store['plan/'+k]||{date:k};p.run={miles:6,label:'6 mi at marathon race pace',detail:''};__store['plan/'+k]=p;__rt({eventType:'UPDATE',new:{coll:'plan',id:k,data:p}});return k;},tday);await W(300);
+ await pg.tap('.tab[data-tab="plan"]');await W(200);await pg.tap('[data-pseg="schedule"]');await W(250);await pg.tap(`[data-act="daysheet"][data-d="${tmr}"]`);await W(300);
+ const mpTxt=await pg.textContent('.sh');
+ ok(P+'marathon race pace is a marathon-pace run, not a race',/\d{1,2}:\d\d to \d{1,2}:\d\d \/mi/.test(mpTxt)&&!/All out/.test(mpTxt),mpTxt.replace(/\s+/g,' ').slice(0,160));
+ await pg.tap('.sh [data-act="close"]');await W(200);
+ await pg.tap('[data-pseg="schedule"]');await W(200);await pg.tap('.tab[data-tab="today"]');await W(250);
  // Home PT slot sheet and check-in
  await pg.tap('[data-act="ptslot"][data-slot="am"]');await W(250);
  ok(P+'home PT opens a checklist',(await pg.textContent('.sh-nav .ttl')).startsWith('Morning PT'));
