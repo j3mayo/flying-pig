@@ -30,10 +30,11 @@ A private, single-user training app (running, lifting, physical therapy, health 
 - `loads/{id}`: exercises and current targets per lift day (A to D, P = PT session). Blocks sharing a letter (A1, A2) are supersets; `Prep` and `Finish` blocks list several moves in one name separated by commas.
 - `liftlog/{date}` and `liftlog/{date}~{day}`: one row per session; always use each row's `date` and `day` fields.
 - `runs/{id}`, `daily/{date}` (check-in, sleep, HRV, RHR, weight, steps, `pt` home PT counts, `warm` run warm-up checks), `requests/{id}`, `updates/{id}`, `settings/*` (goals, goalSuggestions, ptDaily, milestones, gear, main, coach, program, import).
-- `notify/{id}` `{title, body, url}`: inserting one sends a push to every `push/{id}` subscription (written by the push function, one per device). The coach writes at most one notify row per night, only when something needs the owner.
+- `notify/{id}` `{title, body, url}`: inserting one sends a push to every `push/{id}` subscription (written by the push function, one per device). The coach writes at most one notify row per run, only when something needs the owner.
+- `settings/main` also holds `ref5k` (mm:ss, the 5K reference the pace targets are predicted from), `maxHR`, `easyCap`, optional `weightLb`. `settings/fuel {notes}` and `plan.fuel` (per day) are coach notes shown on the Fuel tab. `runs.awaitWatch`, `daily.soccer`, `daily.ptLog` are described in the coach prompt.
 
 ## Design rules
-- Dark theme only. Four tabs: Today, Plan, Health, You. Color only for meaning: run green, lift blue, PT purple, soccer orange, recovery teal, body yellow.
+- Dark theme only (deep graphite, not pure black). Five tabs: Today, Plan, Health, Fuel, You. Color only for meaning: run green, lift indigo, PT violet, soccer amber, recovery sky, body gold; blue is for interaction only.
 - Text in buttons, rows, pills and boxes stays on one line (ellipsis, never wrap). Touch targets at least 44 pt. Works at iPhone SE width (320 and 375) and 390.
 - No em dashes anywhere. Health claims in the UI cite peer-reviewed sources only.
 - Number-only boxes use `type="number"` (no `inputmode`, so the keyboard can switch); boxes that take text like `35/15` or `28:44` use `type="text"`.
