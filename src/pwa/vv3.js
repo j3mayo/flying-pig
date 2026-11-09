@@ -47,7 +47,7 @@ for(const scheme of ['light','dark']){
  ok(P+'back to today',!(await pg.$('.lnk.back')));
  await pg.evaluate(t=>{__store['plan/'+t]=Object.assign({},__store['plan/'+t]||{},{date:t,run:{miles:3,label:'Easy 3 mi'},lift:'C',extra:'PT: shrug',soccer:false});__rt({eventType:'UPDATE',new:{coll:'plan',id:t,data:__store['plan/'+t]}});},tday);await W(300);
  const acts=await pg.$$eval('.tlc .go',x=>x.map(e=>e.dataset.act+':'+(e.dataset.day||'')+':'+e.textContent));
- ok(P+'run gets Log Run, lift and PT session get Start',acts.some(a=>a.startsWith('logrun::Log Run'))&&acts.some(a=>/^workout:C:(Start|Resume)/.test(a))&&acts.some(a=>/^workout:P:(Start|Resume)/.test(a)),acts.join(' | '));
+ ok(P+'run gets Log Run, lift and PT session get Start',acts.some(a=>a.startsWith('rundone::Done'))&&acts.some(a=>/^workout:C:(Start|Resume)/.test(a))&&acts.some(a=>/^workout:P:(Start|Resume)/.test(a)),acts.join(' | '));
  const order=await pg.$$eval('.tlc .k',x=>x.map(e=>e.textContent.toLowerCase()));
  ok(P+'warm-up sits right before the run',(()=>{const i=order.findIndex(k=>k.includes('before the run'));return i>=0&&order[i+1]&&order[i+1].includes('run');})(),order.join(','));
  await pg.tap('.tlc [data-act="warmup"]');await W(250);
@@ -68,8 +68,9 @@ for(const scheme of ['light','dark']){
  ok(P+'week arrows move a week',(await pg.getAttribute('.wd.on','data-sday'))===nextWk&&(await pg.$$('.wd')).length===7);
  const vw=await pg.$('.tlc [data-act="liftsheet"][data-view="1"]');if(vw){await vw.tap();await W(250);ok(P+'viewing a future lift has no Start button',!(await pg.$('.sh [data-act="workout"]')));await pg.tap('.sh [data-act="close"]');await W(200);}
  await pg.tap('.lnk.back');await W(250);
- await pg.tap('.tlc [data-act="logrun"]');await W(250);ok(P+'Log Run opens the run form for that day',(await pg.inputValue('#rDate'))===tday&&(await pg.inputValue('#rMi'))==='3');
- ok(P+'run form offers a one-tap watch fill',!!(await pg.$('[data-act="runquick"]')));await pg.tap('[data-act="runquick"]');await W(400);
+ await pg.tap('#logBtn');await W(250);await pg.tap('.sh [data-act="logrun"]');await W(250);ok(P+'Add Run opens the run form for today',(await pg.inputValue('#rDate'))===tday&&(await pg.inputValue('#rMi'))==='3');
+ ok(P+'run form offers a one-tap watch fill',!!(await pg.$('[data-act="runquick"]')));await pg.tap('.sh [data-act="close"]');await W(200);
+ ok(P+'the run on Today has a one-tap Done',(await pg.textContent('.tlc [data-act="rundone"]'))==='Done');await pg.tap('.tlc [data-act="rundone"]');await W(400);
  const qr=await pg.evaluate(t=>Object.entries(__store).find(([k,v])=>k.startsWith('runs/')&&v&&v.date===t&&v.awaitWatch),tday);
  ok(P+'quick log saves the planned miles and waits for the watch',!!qr&&qr[1].miles===3&&qr[1].timeSec===null&&!(await pg.evaluate(()=>document.getElementById('dlg').open)),JSON.stringify(qr&&qr[1]));
  await pg.tap('.tab[data-tab="plan"]');await W(200);await pg.tap('[data-pseg="runs"]');await W(250);
@@ -130,6 +131,7 @@ for(const scheme of ['light','dark']){
  // Health
  await pg.tap('.tab[data-tab="health"]');await W(300);
  const pil=await pg.$$eval('.pillar h3',x=>x.map(e=>e.textContent));ok(P+'Health shows the four pillars',pil.join('|')==='Heart & Fitness|Recovery|Strength|Body',pil.join('|'));
+ ok(P+'Progress trackers for running and strength sit above the pillars',(await pg.$$('.pcard')).length===2&&(await pg.textContent('.pcard >> nth=0')).includes('Running')&&(await pg.textContent('.pcard >> nth=1')).includes('Strength index')&&(await pg.$$('.pcard svg')).length>=2);
  const pills=await pg.$$eval('.pillar .ph .pill',x=>x.map(e=>e.textContent));ok(P+'pillar statuses computed from trends',pills[0]==='Improving'&&pills[1]==='Improving'&&pills[3]!=='Building baseline',pills.join(','));
  ok(P+'pillar charts drawn',(await pg.$$('.pillar svg')).length>=3);
  ok(P+'VO2 and steps shown',(await pg.textContent('#view')).includes('VO2 max')&&/9,\d{3}/.test(await pg.textContent('#view')));
@@ -278,7 +280,10 @@ for(const scheme of ['light','dark']){
  await pg.tap('[data-act="pweek"] >> nth=0');await W(250);ok(P+'tapping a week opens its days',(await pg.textContent('.sh-nav .ttl')).startsWith('Week of'));await pg.tap('.sh [data-act="close"]');await W(200);
  await pg.evaluate(()=>{delete __store['settings/program'];__rt({eventType:'DELETE',old:{coll:'settings',id:'program'}});});await W(300);
  ok(P+'without a program the view says when it arrives',(await pg.textContent('#view')).includes('9 AM review')&&(await pg.$$('[data-act="pweek"]')).length>=4);
- await pg.tap('.tab[data-tab="you"]');await W(250);await pg.tap('[data-act="req"]:has-text("Equipment: full gym")');await W(250);
+ await pg.tap('.tab[data-tab="you"]');await W(250);await pg.tap('[data-act="thread"]');await W(300);
+ ok(P+'Coach opens one running conversation',(await pg.textContent('.sh-nav .ttl'))==='Coach'&&(await pg.$$('.sh .msg.me')).length>=1&&(await pg.textContent('.sh .msg.coach .bub')).includes('Day A now has barbell bench')&&!!(await pg.$('.sh #reqText'))&&!!(await pg.$('.sh [data-act="threadsend"]')));
+ ok(P+'messages run oldest to newest with the compose box last',await pg.evaluate(()=>{const m=[...document.querySelectorAll('.sh .msg.me .meta')].map(e=>e.textContent);const c=document.querySelector('.sh .compose');return m.length>=1&&!!c&&!!(c.compareDocumentPosition(document.querySelector('.sh .msgs'))&Node.DOCUMENT_POSITION_PRECEDING);}));
+ await pg.tap('.sh [data-act="req"]:has-text("Equipment: full gym")');await W(250);
  ok(P+'request detail leads with the coach reply',(await pg.textContent('.sh .cap >> nth=0')).startsWith('Coach')&&((await pg.textContent('.sh .group.reply'))||'').includes('Day A now has barbell bench'),JSON.stringify([await pg.textContent('.sh-nav .ttl'),(await pg.textContent('.sh .cap >> nth=0')).slice(0,40),((await pg.textContent('.sh-body'))||'').slice(0,160)]));
  await pg.tap('.sh [data-act="close"]');await W(200);await pg.tap('.sec-h [data-act="newreq"]');await W(250);
  ok(P+'request templates offered',(await pg.$$('[data-act="reqtpl"]')).length>=4);

@@ -64,7 +64,7 @@ for(const scheme of ['light','dark']){
  await pg.tap('[data-act="reqsave"]');await pg.waitForTimeout(500);
  const req=await pg.evaluate(()=>Object.values(__store).find(v=>v&&v.kind==='pt'&&v.attachments));
  ok(scheme+': PT request saved with text read from PDF and photo',req&&req.attachments.length===2&&req.attachments.some(a=>a.text.includes('Wall slides'))&&req.attachments.some(a=>a.text.includes('Side plank')),JSON.stringify(req&&req.attachments.map(a=>a.text.slice(0,20))));
- await pg.tap('.tab[data-tab="you"]');await pg.waitForTimeout(200);await pg.tap('[data-act="req"] >> nth=0');await pg.waitForTimeout(300);
+ await pg.tap('.tab[data-tab="you"]');await pg.waitForTimeout(200);await pg.tap('[data-act="thread"]');await pg.waitForTimeout(300);await pg.tap('.sh [data-act="req"] >> nth=-1');await pg.waitForTimeout(300);
  ok(scheme+': request detail shows attachments',(await pg.$$('.sh .att .a')).length===2);await pg.tap('.sh [data-act="close"]');await pg.waitForTimeout(200);
  await pg.tap('[data-act="gear"][data-id="new"]');await pg.waitForTimeout(200);await pg.fill('#gnName','Nike Pegasus 41');await pg.fill('#gnSince','2026-10-20');await pg.fill('#gnBase','10');await pg.tap('[data-act="gearsave"]');await pg.waitForTimeout(300);
  const shoeMi=String(Math.round((10+Object.entries(seed).filter(([k,v])=>k.startsWith('runs/')&&v.date>='2026-10-20'&&!v.shoe).reduce((a,[,v])=>a+(+v.miles||0),0))*10)/10)+' mi';
