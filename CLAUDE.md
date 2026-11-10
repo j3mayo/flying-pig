@@ -37,6 +37,7 @@ A private, single-user training app (running, lifting, physical therapy, health 
 - Dark theme only (warm near-black, not pure black). Five tabs: Today, Plan, Health, Fuel, You. Color only for meaning: run green, lift blue, PT rose, soccer amber, recovery aqua, body gold; coral (the tint) is for interaction only.
 - Text in buttons, rows, pills and boxes stays on one line (ellipsis, never wrap). Touch targets at least 44 pt. Works at iPhone SE width (320 and 375) and 390.
 - No em dashes anywhere. Health claims in the UI cite peer-reviewed sources only.
+- Follows the owner's design-standards skill: sentence case (no uppercase labels), no eyebrow label above a title (state goes in a small text pill), every color meaning also shown as text (no color-only dots), no colored side borders, number readouts 24 px or less, buttons name the action ("Mark done", "Check off"), no instruction text on screen, "No data" instead of a dash for missing values.
 - Number-only boxes use `type="number"` (no `inputmode`, so the keyboard can switch); boxes that take text like `35/15` or `28:44` use `type="text"`.
 - Never redraw under a focused input (see `queue()`); never commit fixtures, exports or personal data (the repo is public).
 

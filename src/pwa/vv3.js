@@ -47,16 +47,17 @@ for(const scheme of ['light','dark']){
  ok(P+'back to today',!(await pg.$('.lnk.back')));
  await pg.evaluate(t=>{__store['plan/'+t]=Object.assign({},__store['plan/'+t]||{},{date:t,run:{miles:3,label:'Easy 3 mi'},lift:'C',extra:'PT: shrug',soccer:false});__rt({eventType:'UPDATE',new:{coll:'plan',id:t,data:__store['plan/'+t]}});},tday);await W(300);
  const acts=await pg.$$eval('.tlc .go',x=>x.map(e=>e.dataset.act+':'+(e.dataset.day||'')+':'+e.textContent));
- ok(P+'run gets Log Run, lift and PT session get Start',acts.some(a=>a.startsWith('rundone::Done'))&&acts.some(a=>/^workout:C:(Start|Resume)/.test(a))&&acts.some(a=>/^workout:P:(Start|Resume)/.test(a)),acts.join(' | '));
- const order=await pg.$$eval('.tlc .k',x=>x.map(e=>e.textContent.toLowerCase()));
- ok(P+'warm-up sits right before the run',(()=>{const i=order.findIndex(k=>k.includes('before the run'));return i>=0&&order[i+1]&&order[i+1].includes('run');})(),order.join(','));
+ ok(P+'run gets Log Run, lift and PT session get Start',acts.some(a=>a.startsWith('rundone::Mark done'))&&acts.some(a=>/^workout:C:(Start|Resume)/.test(a))&&acts.some(a=>/^workout:P:(Start|Resume)/.test(a)),acts.join(' | '));
+ const order=await pg.$$eval('.tl:not(.rec) .tlc .t',x=>x.map(e=>e.textContent.toLowerCase()));
+ ok(P+'warm-up sits right before the run',(()=>{const i=order.findIndex(k=>k.includes('warm-up'));return i>=0&&order[i+1]&&/\d mi/.test(order[i+1]);})(),order.join(','));
+ ok(P+'no eyebrow label above card titles',await pg.$$eval('.tlc .main',x=>x.every(m=>m.firstElementChild&&m.firstElementChild.classList.contains('t'))));
  await pg.tap('.tlc [data-act="warmup"]');await W(250);
- ok(P+'warm-up opens a checklist',(await pg.textContent('.sh-nav .ttl')).startsWith('Run Warm-Up')&&(await pg.$$('.sh [data-act="warmtick"]')).length===7);
+ ok(P+'warm-up opens a checklist',(await pg.textContent('.sh-nav .ttl')).startsWith('Run warm-up')&&(await pg.$$('.sh [data-act="warmtick"]')).length===7);
  for(let i=0;i<7;i++){await pg.tap(`.sh [data-act="warmtick"] >> nth=${i}`);await W(150);}
  ok(P+'warm-up checks save for today',await pg.evaluate(t=>Object.keys((__store['daily/'+t]||{}).warm||{}).length===7,tday)&&(await pg.textContent('.sh-nav .ttl small')).startsWith('7 of 7'));
  await pg.tap('.sh [data-act="close"]');await W(250);
- ok(P+'finished warm-up fades and is no longer up next',(await pg.$$eval('.tli',x=>x.map(e=>e.className+'|'+e.querySelector('.k').textContent.toLowerCase()))).some(c=>c.includes('done')&&c.includes('before the run'))&&!(await pg.textContent('.tli.next .k')).toLowerCase().includes('before the run'));
- ok(P+'Day C comes before the run',order.findIndex(k=>k.includes('lift'))<order.findIndex(k=>k.includes('run')),order.join(','));
+ ok(P+'finished warm-up fades, says Done, and is no longer up next',(await pg.$$eval('.tli.done',x=>x.map(e=>e.querySelector('.t').textContent.toLowerCase()))).some(c=>c.startsWith('done')&&c.includes('warm-up'))&&!(await pg.textContent('.tli.next .t')).toLowerCase().includes('warm-up')&&(await pg.textContent('.tli.next .k'))==='Up next');
+ ok(P+'Day C comes before the run',order.findIndex(k=>k.includes('day c'))>=0&&order.findIndex(k=>k.includes('day c'))<order.findIndex(k=>/\d mi/.test(k)),order.join(','));
  await pg.evaluate(t=>{const row={date:t,day:'C',status:'done',exercises:[{id:'c1',name:'Speed Smith squat',sets:[{load:'95',reps:'3',done:true}]}]};__store['liftlog/'+t]=row;__rt({eventType:'INSERT',new:{coll:'liftlog',id:t,data:row}});},tday);await W(300);
  await pg.tap('.tlc [data-act="workout"][data-day="P"]');await W(400);
  ok(P+'PT session starts on a day a lift is already logged',await pg.evaluate(()=>document.getElementById('dlg').open)&&(await pg.textContent('.sh-nav .ttl')).startsWith('PT Session'));
@@ -73,7 +74,7 @@ for(const scheme of ['light','dark']){
  await pg.tap('.lnk.back');await W(250);
  await pg.tap('#logBtn');await W(250);await pg.tap('.sh [data-act="logrun"]');await W(250);ok(P+'Add Run opens the run form for today',(await pg.inputValue('#rDate'))===tday&&(await pg.inputValue('#rMi'))==='3');
  ok(P+'run form offers a one-tap watch fill',!!(await pg.$('[data-act="runquick"]')));await pg.tap('.sh [data-act="close"]');await W(200);
- ok(P+'the run on Today has a one-tap Done',(await pg.textContent('.tlc [data-act="rundone"]'))==='Done');await pg.tap('.tlc [data-act="rundone"]');await W(400);
+ ok(P+'the run on Today has a one-tap Done',(await pg.textContent('.tlc [data-act="rundone"]'))==='Mark done');await pg.tap('.tlc [data-act="rundone"]');await W(400);
  const qr=await pg.evaluate(t=>Object.entries(__store).find(([k,v])=>k.startsWith('runs/')&&v&&v.date===t&&v.awaitWatch),tday);
  ok(P+'quick log saves the planned miles and waits for the watch',!!qr&&qr[1].miles===3&&qr[1].timeSec===null&&!(await pg.evaluate(()=>document.getElementById('dlg').open)),JSON.stringify(qr&&qr[1]));
  await pg.tap('.tab[data-tab="plan"]');await W(200);await pg.tap('[data-pseg="runs"]');await W(250);
@@ -130,7 +131,7 @@ for(const scheme of ['light','dark']){
  await pg.tap('[data-act="ptex"][data-id="p1"]');await W(200);await pg.fill('#peLoad','40s');await pg.tap('[data-act="ptexsave"]');await W(300);
  ok(P+'PT session exercise edited',await pg.evaluate(()=>__store['loads/p1'].load==='40s'));
  await pg.tap('[data-act="ptex"][data-id="p2"]');await W(200);await pg.tap('[data-act="ptexdel"]');await W(300);
- ok(P+'one tap does not remove a PT exercise',await pg.evaluate(()=>!!__store['loads/p2'])&&(await pg.textContent('[data-act="ptexdel"]'))==='Tap Again to Remove');
+ ok(P+'one tap does not remove a PT exercise',await pg.evaluate(()=>!!__store['loads/p2'])&&(await pg.textContent('[data-act="ptexdel"]'))==='Confirm remove');
  await pg.tap('[data-act="ptexdel"]');await W(300);
  ok(P+'PT session exercise removed',await pg.evaluate(()=>!__store['loads/p2']));
  await pg.tap('[data-act="ptex"][data-id="new"]');await W(200);await pg.fill('#peName','Prone Y');await pg.fill('#peScheme','3 x 12');await pg.tap('[data-act="ptexsave"]');await W(300);
@@ -273,18 +274,18 @@ for(const scheme of ['light','dark']){
  ok(P+'discarding the workout gives the home item back',(await homePT())===ptBefore);
  // discard
  await pg.tap('.tab[data-tab="plan"]');await W(150);await pg.tap('[data-pseg="lifts"]');await W(150);await pg.tap('[data-lday="B"]');await W(100);await pg.tap('[data-act="workout"][data-day="B"]');await W(400);
- await pg.tap('[data-w="discard"]');await W(150);ok(P+'discard asks for a second tap',(await pg.textContent('[data-w="discard"]')).includes('Tap again'));
+ await pg.tap('[data-w="discard"]');await W(150);ok(P+'discard asks for a second tap',(await pg.textContent('[data-w="discard"]')).includes('Confirm discard'));
  await pg.tap('[data-w="discard"]');await W(400);ok(P+'discard removes the session',await pg.evaluate(()=>!Object.values(__store).some(v=>v&&v.status==='in_progress'&&v.exercises))&&!(await pg.evaluate(()=>document.getElementById('dlg').open)));
  // Settings: notifications state, watch sync sheet; gym: PR tag
  await pg.tap('.tab[data-tab="you"]');await W(300);
  ok(P+'notifications row shows its state',((await pg.textContent('#pushS'))||'').length>3&&(await pg.textContent('#pushS'))!=='Checking…',await pg.textContent('#pushS'));
  ok(P+'watch sync row shows the last sync',/ago|Not set up/.test(await pg.textContent('[data-act="watchsync"] .s')),await pg.textContent('[data-act="watchsync"] .s'));
  await pg.tap('[data-act="watchsync"]');await W(400);
- ok(P+'watch sync sheet gives the setup steps',(await pg.textContent('.sh-nav .ttl'))==='Watch Sync'&&(await pg.textContent('.sh-body')).includes('REST API')&&!!(await pg.$('#haeUrl')));
+ ok(P+'watch sync sheet gives the setup steps',(await pg.textContent('.sh-nav .ttl'))==='Watch sync'&&(await pg.textContent('.sh-body')).includes('REST API')&&!!(await pg.$('#haeUrl')));
  await pg.tap('.sh [data-act="close"]');await W(200);
  // Paces and Fuel
  await pg.tap('.tab[data-tab="today"]');await W(250);
- ok(P+'planned run shows a pace and heart-rate target',/\d{1,2}:\d\d to \d{1,2}:\d\d \/mi · HR/.test(await pg.$$eval('.tlc .s',x=>x.map(e=>e.textContent).join(' | '))),await pg.$$eval('.tlc .s',x=>x.map(e=>e.textContent).join(' | ')));
+ ok(P+'planned run shows a pace and heart-rate target, each fully visible',await pg.$$eval('.tlc .s',x=>{const p=x.find(e=>/^\d{1,2}:\d\d to \d{1,2}:\d\d \/mi$/.test(e.textContent));const h=x.find(e=>/^HR /.test(e.textContent));return !!p&&!!h&&p.scrollWidth<=p.clientWidth&&h.scrollWidth<=h.clientWidth;}),await pg.$$eval('.tlc .s',x=>x.map(e=>e.textContent).join(' | ')));
  await pg.tap('.tab[data-tab="plan"]');await W(200);await pg.tap('[data-pseg="runs"]');await W(250);
  ok(P+'Plan > Runs opens with the paces card',(await pg.textContent('[data-act="paces"]')).includes('Marathon pace')&&(await pg.textContent('[data-act="paces"]')).includes('Threshold'));
  await pg.tap('[data-act="paces"]');await W(300);await pg.fill('#ref5k','23:00');await pg.tap('.sh-nav [data-act="pacesave"]');await W(400);
@@ -321,7 +322,7 @@ for(const scheme of ['light','dark']){
  ok(P+'request templates offered',(await pg.$$('[data-act="reqtpl"]')).length>=4);
  await pg.tap('[data-act="reqtpl"] >> nth=0');await W(150);ok(P+'template fills the request box',(await pg.inputValue('#reqText')).startsWith('Swap ['));
  await pg.tap('.sh [data-act="close"]');await W(200);await pg.tap('[data-act="updates"]');await W(250);
- ok(P+'Coach Log groups updates by day',(await pg.textContent('.sh-nav .ttl'))==='Coach Log'&&(await pg.$$('.sh .cap')).length>=2&&(await pg.$$('.sh [data-act="upd"]')).length>=3);
+ ok(P+'Coach Log groups updates by day',(await pg.textContent('.sh-nav .ttl'))==='Coach log'&&(await pg.$$('.sh .cap')).length>=2&&(await pg.$$('.sh [data-act="upd"]')).length>=3);
  await pg.tap('.sh [data-act="close"]');await W(200);
  // native polish pass: in-flow check-in, collapsing nav, two-state tab glyphs, one radius, folded citations, full-width titles
  await pg.tap('.tab[data-tab="today"]');await W(250);
