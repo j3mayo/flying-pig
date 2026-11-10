@@ -119,7 +119,8 @@ for(const scheme of ['light','dark']){
  await pg.tap('[data-act="notfeeling"]');await W(250);await pg.tap('[data-act="nfsend"]');await W(200);ok(P+'Not feeling it needs a reason',(await pg.textContent('.toast')).includes('Pick'));
  await pg.tap('[data-act="nfpick"][data-i="1"]');await pg.fill('#nfNote','Calves tight');await pg.tap('[data-act="nfsend"]');await W(300);
  ok(P+'Not feeling it files a request for tonight',await pg.evaluate(()=>Object.values(__store).some(v=>v&&v.kind==='change'&&v.status==='pending'&&v.text==='Not feeling 100% (Sore): Calves tight. Please ease the next few days.')));
- await pg.tap('[data-pseg="runs"]');await W(200);ok(P+'Plan shows runs: this week, paces, at most five recent runs',(await pg.textContent('#view')).includes('Recent runs')&&(await pg.$$('#view [data-act="rundetail"]')).length<=5&&!!(await pg.$('#view [data-act="paces"]')));
+ await pg.tap('[data-pseg="runs"]');await W(200);ok(P+'paces list is read out, not hidden behind a label',!(await pg.$('#view [data-act="paces"][aria-label]')));
+ ok(P+'Plan shows runs: this week, paces, at most five recent runs',(await pg.textContent('#view')).includes('Recent runs')&&(await pg.$$('#view [data-act="rundetail"]')).length<=5&&!!(await pg.$('#view [data-act="paces"]')));
  if(await pg.$('#view [data-act="allruns"]')){await pg.tap('#view [data-act="allruns"]');await W(300);ok(P+'All runs opens every run',(await pg.$$('.sh [data-act="rundetail"]')).length===(await pg.evaluate(()=>Object.keys(__store).filter(k=>k.startsWith('runs/')).length)));await pg.tap('.sh [data-act="close"]');await W(200);}
  await pg.tap('[data-pseg="lifts"]');await W(200);ok(P+'Lifts no longer repeats the strength chart',!(await pg.textContent('#view')).includes('Strength progress')&&(await pg.textContent('#view')).includes('History'));await pg.tap('[data-pseg="runs"]');await W(200);
  await pg.tap('[data-act="rundetail"] >> nth=0');await W(250);ok(P+'tapping a run opens its detail',(await pg.$$eval('.sh .row .t',x=>x.map(e=>e.textContent))).join(',').includes('Avg heart rate'));await pg.tap('.sh [data-act="close"]');await W(200);
@@ -154,9 +155,14 @@ for(const scheme of ['light','dark']){
  // Health
  await pg.tap('.tab[data-tab="health"]');await W(300);
  const pil=await pg.$$eval('#view .sec-h h2',x=>x.map(e=>e.textContent));ok(P+'Health groups the numbers: Fitness, Recovery, Body',pil.join('|')==='Fitness|Recovery|Body',pil.join('|'));
- ok(P+'Running and Strength trend cards sit on top',(await pg.$$('.hcard')).length===2&&(await pg.textContent('.hcard >> nth=0')).includes('Running')&&(await pg.textContent('.hcard >> nth=1')).includes('Index')&&(await pg.$$('.hcard svg')).length===2);
+ ok(P+'Running and Strength trend cards sit on top',(await pg.$$('.hcard')).length===2&&(await pg.textContent('.hcard >> nth=0')).includes('Running')&&(await pg.textContent('.hcard >> nth=1')).includes('Index')&&(await pg.$$('.hcard svg[role="img"]')).length===2);
  const pills=await pg.$$eval('#view .sec-h .pill',x=>x.map(e=>e.textContent));ok(P+'group statuses computed from trends',pills[0]==='Improving'&&pills[1]==='Improving'&&pills[2]!=='Building baseline',pills.join(','));
- ok(P+'every body number opens its trend',(await pg.$$('#view .group [data-act="metric"]')).length===7);
+ ok(P+'every body number opens its trend, long run included',(await pg.$$('#view .group [data-act="metric"]')).length===8&&!!(await pg.$('#view [data-act="metric"][data-k="long"]')));
+ await pg.tap('#view [data-act="metric"][data-k="long"]');await W(250);ok(P+'long run trend opens',(await pg.textContent('.sh-nav .ttl'))==='Long run'&&!!(await pg.$('.sh .chart svg')));await pg.tap('.sh [data-act="close"]');await W(200);
+ ok(P+'icons inside trend cards keep their size',await pg.$$eval('.hcard .chev',x=>x.every(e=>e.getBoundingClientRect().width<=16))&&await pg.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+ ok(P+'strength card shows a status and its lifts open their trend',!!(await pg.$('.hcard[data-h="strength"] .hh .pill'))&&(await pg.$$('.hcard[data-h="strength"] [data-act="metric"][data-k^="lift:"]')).length>=1);
+ const nLifts=+(await pg.textContent('[data-act="alllifts"] .v'));await pg.tap('[data-act="alllifts"]');await W(300);ok(P+'All lifts lists every lift with an estimated max',nLifts>0&&(await pg.$$('.sh [data-act="metric"][data-k^="lift:"]')).length===nLifts);
+ await pg.tap('.sh [data-act="metric"][data-k^="lift:"] >> nth=0');await W(300);ok(P+'a lift opens its estimated-max trend',/est\. max/.test(await pg.textContent('.sh-nav .ttl')));await pg.tap('.sh [data-act="close"]');await W(200);
  ok(P+'VO2 and steps shown',(await pg.textContent('#view')).includes('VO2 max')&&/9,\d{3}/.test(await pg.textContent('#view')));
  await pg.tap('[data-act="metric"][data-k="rhr"]');await W(250);ok(P+'tapping a number opens its trend',(await pg.textContent('.sh-nav .ttl'))==='Resting heart rate'&&!!(await pg.$('.sh .chart svg')));
  await pg.tap('[data-act="mrange"][data-n="30"]');await W(200);ok(P+'trend range switches',(await pg.getAttribute('[data-act="mrange"][data-n="30"]','aria-pressed'))==='true'&&!!(await pg.$('.sh .chart svg')));
@@ -294,7 +300,7 @@ for(const scheme of ['light','dark']){
  await pg.tap('[data-act="paces"]');await W(300);await pg.fill('#ref5k','23:00');await pg.tap('.sh-nav [data-act="pacesave"]');await W(400);
  ok(P+'saving a 5K time updates the paces',await pg.evaluate(()=>__store['settings/main'].ref5k==='23:00'));
  await pg.tap('.tab[data-tab="fuel"]');await W(300);
- ok(P+'Fuel tab gives carb and protein grams for today',/Carbs[\s\S]*\d+ to \d+ g/.test(await pg.textContent('.hcard'))&&/Protein/.test(await pg.textContent('.hcard')));
+ ok(P+'Fuel tab gives carb and protein grams for today, with sources',/Carbs[\s\S]*\d+ to \d+ g/.test(await pg.textContent('.hcard'))&&/Protein/.test(await pg.textContent('.hcard'))&&/Thomas[\s\S]*2016[\s\S]*J.ger[\s\S]*2017/.test(await pg.textContent('.hcard')));
  ok(P+'Fuel shows before, during and after as one-line rows',(await pg.$$eval('#view [data-act="fueltime"] .t',x=>x.map(e=>e.textContent).join(',')))==='Before,During,After');
  await pg.tap('#view [data-act="fueltime"] >> nth=0');await W(250);ok(P+'timing sheet has the full guidance and a source',(await pg.$$eval('.sh .cap',x=>x.map(e=>e.textContent.trim()))).filter(x=>['Before','During','After'].includes(x)).length===3&&/\d{4}/.test(await pg.textContent('.sh .foot')));await pg.tap('.sh [data-act="close"]');await W(200);
  ok(P+'Fuel guides open as sheets',(await pg.$$('#view [data-act="fuelinfo"]')).length===6);await pg.tap('#view [data-act="fuelinfo"][data-i="foods"]');await W(250);ok(P+'food guide lists carbs per portion',(await pg.$$('.sh .ftab tr')).length>=10);await pg.tap('.sh [data-act="close"]');await W(200);
