@@ -33,7 +33,8 @@ for(const scheme of ['light','dark']){
  await pg.screenshot({path:out+'-'+scheme+'-today.png',fullPage:true});
  ok(P+'Today shows race countdown and date',/Race in \d+ days/i.test(await pg.textContent('.tk'))&&/^\w+day, \w{3} \d+$/.test(await pg.textContent('.dt1')),await pg.textContent('.dt1'));
  ok(P+'race countdown bar fills toward race day',await pg.$eval('.cdb i',e=>{const w=parseFloat(e.style.width);return w>0&&w<=100;})&&/\d+ days until race day/.test(await pg.getAttribute('.cd','aria-label')));
- ok(P+'three rings: miles, lifts, PT',(await pg.$$eval('.rt span',x=>x.map(e=>e.textContent.split(' ')[0]).join(',')))==='Miles,Lifts,PT');
+ ok(P+'three labeled bars: miles, lifts, PT days',(await pg.$$eval('.bars .bxh span',x=>x.map(e=>e.textContent).join(',')))==='Miles,Lifts,PT days'&&(await pg.$$eval('.bars .bxh b',x=>x.every(e=>/^\d+(\.\d)? of \d+(\.\d)?$/.test(e.textContent)))));
+ ok(P+'Up next sits above the week, with a full-width action',await pg.evaluate(()=>{const f=document.querySelector('.focusbox .tli.next'),b=document.querySelector('.bars');if(!f||!b)return false;const go=f.querySelector('.go');return !!(f.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING)&&!!go&&go.getBoundingClientRect().width>f.querySelector('.tlc').getBoundingClientRect().width*0.8;}));
  ok(P+'timeline lists the day',(await pg.$$('.tl .tli')).length>=1);
  ok(P+'session buttons are 44 pt targets',await pg.$$eval('.tlc .go, .ckin',x=>x.length>0&&x.every(e=>e.getBoundingClientRect().height>=44)));
  const tday=await pg.evaluate(()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');});
@@ -104,8 +105,8 @@ for(const scheme of ['light','dark']){
  ok(P+'checking an item updates the sheet',(await pg.textContent('.sh-nav .ttl small')).startsWith('1 of'));
  ok(P+'checked item strikes through',await pg.$eval('.sh .pti[data-id="doorway-am"] .t',e=>getComputedStyle(e).textDecorationLine.includes('line-through')));
  await pg.tap('.sh [data-act="close"]');await W(200);
- ok(P+'PT ring counts it',(await pg.textContent('.rt >> nth=2')).startsWith('1'));
- ok(P+'PT ring counts days of the week, Monday start',(await pg.textContent('.rt >> nth=2')).includes('PT days /7')&&(await pg.$eval('.wd >> nth=0',e=>e.querySelector('small').textContent))==='M');
+ ok(P+'PT bar counts it',(await pg.textContent('.bars .bx >> nth=2 >> .bxh b')).startsWith('1 of'));
+ ok(P+'PT bar counts days of the week, Monday start',(await pg.textContent('.bars .bx >> nth=2')).includes('PT days')&&(await pg.textContent('.bars .bx >> nth=2 >> .bxh b')).endsWith('of 7')&&(await pg.$eval('.wd >> nth=0',e=>e.querySelector('small').textContent))==='M');
  const hadDot=!!(await pg.$('.ckin i'));await pg.evaluate(t=>{const d=__store['daily/'+t];if(d){delete d.energy;}},tday);
  await pg.tap('.ckin');await W(250);ok(P+'check-in sheet has one Save button',(await pg.$$('.sh [data-act="feelsave"]')).length===1&&!!(await pg.$('.sh-nav [data-act="feelsave"]')));for(const [k,vv] of [['energy',4],['soreness',2],['motivation',4]]) await pg.tap(`.sh [data-feel="${k}"][data-v="${vv}"]`);
  await pg.tap('.sh-nav [data-act="feelsave"]');await W(400);
@@ -118,7 +119,9 @@ for(const scheme of ['light','dark']){
  await pg.tap('[data-act="notfeeling"]');await W(250);await pg.tap('[data-act="nfsend"]');await W(200);ok(P+'Not feeling it needs a reason',(await pg.textContent('.toast')).includes('Pick'));
  await pg.tap('[data-act="nfpick"][data-i="1"]');await pg.fill('#nfNote','Calves tight');await pg.tap('[data-act="nfsend"]');await W(300);
  ok(P+'Not feeling it files a request for tonight',await pg.evaluate(()=>Object.values(__store).some(v=>v&&v.kind==='change'&&v.status==='pending'&&v.text==='Not feeling 100% (Sore): Calves tight. Please ease the next few days.')));
- await pg.tap('[data-pseg="runs"]');await W(200);ok(P+'Plan shows runs',(await pg.textContent('#view')).includes('Easy pace'));
+ await pg.tap('[data-pseg="runs"]');await W(200);ok(P+'Plan shows runs: this week, paces, at most five recent runs',(await pg.textContent('#view')).includes('Recent runs')&&(await pg.$$('#view [data-act="rundetail"]')).length<=5&&!!(await pg.$('#view [data-act="paces"]')));
+ if(await pg.$('#view [data-act="allruns"]')){await pg.tap('#view [data-act="allruns"]');await W(300);ok(P+'All runs opens every run',(await pg.$$('.sh [data-act="rundetail"]')).length===(await pg.evaluate(()=>Object.keys(__store).filter(k=>k.startsWith('runs/')).length)));await pg.tap('.sh [data-act="close"]');await W(200);}
+ await pg.tap('[data-pseg="lifts"]');await W(200);ok(P+'Lifts no longer repeats the strength chart',!(await pg.textContent('#view')).includes('Strength progress')&&(await pg.textContent('#view')).includes('History'));await pg.tap('[data-pseg="runs"]');await W(200);
  await pg.tap('[data-act="rundetail"] >> nth=0');await W(250);ok(P+'tapping a run opens its detail',(await pg.$$eval('.sh .row .t',x=>x.map(e=>e.textContent))).join(',').includes('Avg heart rate'));await pg.tap('.sh [data-act="close"]');await W(200);
  await pg.tap('[data-pseg="lifts"]');await W(200);ok(P+'Plan shows lifts',!!(await pg.$('[data-lday="A"]')));
  await pg.evaluate(()=>{location.hash='runs';});await W(250);ok(P+'old #runs link opens Plan > Runs',(await pg.getAttribute('[data-pseg="runs"]','aria-pressed'))==='true');
@@ -150,17 +153,17 @@ for(const scheme of ['light','dark']){
  await pg.tap('.sh [data-act="close"]');await W(200);
  // Health
  await pg.tap('.tab[data-tab="health"]');await W(300);
- const pil=await pg.$$eval('.pillar h3',x=>x.map(e=>e.textContent));ok(P+'Health shows the four pillars',pil.join('|')==='Heart & Fitness|Recovery|Strength|Body',pil.join('|'));
- ok(P+'Progress trackers for running and strength sit above the pillars',(await pg.$$('.pcard')).length===2&&(await pg.textContent('.pcard >> nth=0')).includes('Running')&&(await pg.textContent('.pcard >> nth=1')).includes('Strength index')&&(await pg.$$('.pcard svg')).length>=2);
- const pills=await pg.$$eval('.pillar .ph .pill',x=>x.map(e=>e.textContent));ok(P+'pillar statuses computed from trends',pills[0]==='Improving'&&pills[1]==='Improving'&&pills[3]!=='Building baseline',pills.join(','));
- ok(P+'pillar charts drawn',(await pg.$$('.pillar svg')).length>=3);
+ const pil=await pg.$$eval('#view .sec-h h2',x=>x.map(e=>e.textContent));ok(P+'Health groups the numbers: Fitness, Recovery, Body',pil.join('|')==='Fitness|Recovery|Body',pil.join('|'));
+ ok(P+'Running and Strength trend cards sit on top',(await pg.$$('.hcard')).length===2&&(await pg.textContent('.hcard >> nth=0')).includes('Running')&&(await pg.textContent('.hcard >> nth=1')).includes('Index')&&(await pg.$$('.hcard svg')).length===2);
+ const pills=await pg.$$eval('#view .sec-h .pill',x=>x.map(e=>e.textContent));ok(P+'group statuses computed from trends',pills[0]==='Improving'&&pills[1]==='Improving'&&pills[2]!=='Building baseline',pills.join(','));
+ ok(P+'every body number opens its trend',(await pg.$$('#view .group [data-act="metric"]')).length===7);
  ok(P+'VO2 and steps shown',(await pg.textContent('#view')).includes('VO2 max')&&/9,\d{3}/.test(await pg.textContent('#view')));
  await pg.tap('[data-act="metric"][data-k="rhr"]');await W(250);ok(P+'tapping a number opens its trend',(await pg.textContent('.sh-nav .ttl'))==='Resting heart rate'&&!!(await pg.$('.sh .chart svg')));
  await pg.tap('[data-act="mrange"][data-n="30"]');await W(200);ok(P+'trend range switches',(await pg.getAttribute('[data-act="mrange"][data-n="30"]','aria-pressed'))==='true'&&!!(await pg.$('.sh .chart svg')));
  ok(P+'improving change shown in green',await pg.evaluate(()=>[...document.querySelectorAll('.sh .row .v')].some(e=>e.classList.contains('up'))));
  await pg.tap('.sh [data-act="close"]');await W(200);
  await pg.tap('[data-act="metric"][data-k="pace"]');await W(250);ok(P+'easy pace trend opens',(await pg.textContent('.sh-nav .ttl'))==='Easy pace');await pg.tap('.sh [data-act="close"]');await W(200);
- ok(P+'each pillar cites a study',(await pg.$$eval('.pillar .why',x=>x.filter(e=>/\(\w.*\d{4}\)/.test(e.textContent)).length))===4);
+ await pg.tap('[data-act="healthwhy"]');await W(250);ok(P+'Why these numbers matter cites a study for each group',(await pg.$$eval('.sh .why',x=>x.filter(e=>/\(\w.*\d{4}\)/.test(e.textContent)).length))===4);await pg.tap('.sh [data-act="close"]');await W(200);
  await pg.screenshot({path:out+'-'+scheme+'-health.png',fullPage:true});
  // You: suggestions
  await pg.tap('.tab[data-tab="you"]');await W(250);
@@ -291,8 +294,11 @@ for(const scheme of ['light','dark']){
  await pg.tap('[data-act="paces"]');await W(300);await pg.fill('#ref5k','23:00');await pg.tap('.sh-nav [data-act="pacesave"]');await W(400);
  ok(P+'saving a 5K time updates the paces',await pg.evaluate(()=>__store['settings/main'].ref5k==='23:00'));
  await pg.tap('.tab[data-tab="fuel"]');await W(300);
- ok(P+'Fuel tab gives carb and protein grams for today',/Carbs[\s\S]*\d+ to \d+ g/.test(await pg.textContent('#view'))&&/Protein/.test(await pg.textContent('#view'))&&(await pg.textContent('#view')).includes('Sources:'));
- ok(P+'Fuel tab has before, during and after guidance',(await pg.$$eval('.cap',x=>x.map(e=>e.textContent.trim()))).filter(x=>['Before','During','After'].includes(x)).length===3);
+ ok(P+'Fuel tab gives carb and protein grams for today',/Carbs[\s\S]*\d+ to \d+ g/.test(await pg.textContent('.hcard'))&&/Protein/.test(await pg.textContent('.hcard')));
+ ok(P+'Fuel shows before, during and after as one-line rows',(await pg.$$eval('#view [data-act="fueltime"] .t',x=>x.map(e=>e.textContent).join(',')))==='Before,During,After');
+ await pg.tap('#view [data-act="fueltime"] >> nth=0');await W(250);ok(P+'timing sheet has the full guidance and a source',(await pg.$$eval('.sh .cap',x=>x.map(e=>e.textContent.trim()))).filter(x=>['Before','During','After'].includes(x)).length===3&&/\d{4}/.test(await pg.textContent('.sh .foot')));await pg.tap('.sh [data-act="close"]');await W(200);
+ ok(P+'Fuel guides open as sheets',(await pg.$$('#view [data-act="fuelinfo"]')).length===6);await pg.tap('#view [data-act="fuelinfo"][data-i="foods"]');await W(250);ok(P+'food guide lists carbs per portion',(await pg.$$('.sh .ftab tr')).length>=10);await pg.tap('.sh [data-act="close"]');await W(200);
+ await pg.tap('#view [data-act="fuelinfo"][data-i="caffeine"]');await W(250);ok(P+'caffeine guide cites a source',/Guest et al/.test(await pg.textContent('.sh')));await pg.tap('.sh [data-act="close"]');await W(200);
  // Readiness verdict, lift color split
  await pg.tap('.tab[data-tab="today"]');await W(250);
  ok(P+'Today opens with a readiness verdict',/^(Go as planned|Take it easy today|Rest or very easy|Readiness unknown)$/.test(await pg.textContent('.ready .t')),await pg.textContent('.ready .t'));
@@ -331,11 +337,11 @@ for(const scheme of ['light','dark']){
  ok(P+'PT lives in its own Recovery section under the training timeline',!!(await pg.$('.tl.rec'))&&(await pg.$$('.tl.rec [data-act="ptslot"], .tl.rec [data-act="workout"][data-day="P"]')).length>=1&&!(await pg.$('.tl:not(.rec) [data-act="ptslot"]'))&&(await pg.textContent('#view')).includes('Recovery'));
  ok(P+'week arrows live in the week card',(await pg.$$('.wkc .wkb[aria-label="Previous week"], .wkc .wkb[aria-label="Next week"]')).length===2);
  ok(P+'active tab shows its filled glyph',await pg.evaluate(()=>{const on=document.querySelector('.tab[aria-current="page"] svg .f'),off=document.querySelector('.tab:not([aria-current="page"]) svg .f');return !!on&&getComputedStyle(on).display!=='none'&&!!off&&getComputedStyle(off).display==='none';}));
- ok(P+'cards share one radius',await pg.$$eval('.group, .tlc, .r3, .wkc',x=>x.length>3&&x.every(e=>getComputedStyle(e).borderRadius==='14px')));
+ ok(P+'cards share one radius',await pg.$$eval('.group, .tlc, .bars, .wkc',x=>x.length>3&&x.every(e=>getComputedStyle(e).borderRadius==='14px')));
  await pg.tap('.tab[data-tab="health"]');await W(300);
  ok(P+'nav bar is clear at the top and collapses on scroll',!(await pg.$('#nav.scrolled'))&&await pg.evaluate(async()=>{window.scrollTo(0,300);await new Promise(r=>setTimeout(r,250));return document.getElementById('nav').classList.contains('scrolled');}));
  await pg.evaluate(()=>window.scrollTo(0,0));await W(200);
- ok(P+'health citations fold behind Why it matters',(await pg.$$('details.why-d:not([open])')).length===4&&(await pg.$$eval('.pillar .why',x=>x.filter(e=>/\(\w.*\d{4}\)/.test(e.textContent)).length))===4);
+ ok(P+'health citations sit behind one row, not on the page',!!(await pg.$('[data-act="healthwhy"]'))&&!(await pg.$('#view .why')));
  await pg.tap('.tab[data-tab="you"]');await W(250);
  ok(P+'milestone titles are not cut short',await pg.$$eval('#view .ms-row .t',x=>x.length>=3&&x.every(e=>e.scrollWidth<=e.clientWidth+1)));
  for(const t of ['today','plan','health','fuel','you']){await pg.tap(`.tab[data-tab="${t}"]`);await W(150);if(await pg.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth))ok(P+t+' no sideways scroll',false);}
