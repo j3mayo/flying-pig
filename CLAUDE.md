@@ -34,7 +34,8 @@ A private, single-user training app (running, lifting, physical therapy, health 
 - `settings/main` also holds `ref5k` (mm:ss, the 5K reference the pace targets are predicted from), `maxHR`, `easyCap`, optional `weightLb`. `settings/fuel {notes}` and `plan.fuel` (per day) are coach notes shown on the Fuel tab. `runs.awaitWatch`, `daily.soccer`, `daily.ptLog` are described in the coach prompt.
 
 ## Design rules
-- Dark theme only (warm near-black, not pure black). Five tabs: Today, Plan, Health, Fuel, You. Color only for meaning: run green, lift blue, PT rose, soccer amber, recovery aqua, body gold; coral (the tint) is for interaction only.
+- Dark theme only, "Forge": neutral charcoal greys (equal R, G, B), never tinted. Five tabs: Today, Plan, Health, Fuel, You. Color only for meaning: run green, lift blue, PT red, soccer amber, recovery cyan, body gold; burnt orange (the tint) is for interaction only.
+- Layout, "Focus": the one thing that matters most comes first (Up next on Today, today's targets on Fuel, the two trend cards on Health); detail opens in a sheet instead of printing on the page. No icon-plus-heading cards, no nested cards, no rings (labeled bars instead).
 - Text in buttons, rows, pills and boxes stays on one line (ellipsis, never wrap). Touch targets at least 44 pt. Works at iPhone SE width (320 and 375) and 390.
 - No em dashes anywhere. Health claims in the UI cite peer-reviewed sources only.
 - Follows the owner's design-standards skill: sentence case (no uppercase labels), no eyebrow label above a title (state goes in a small text pill), every color meaning also shown as text (no color-only dots), no colored side borders, number readouts 24 px or less, buttons name the action ("Mark done", "Check off"), no instruction text on screen, "No data" instead of a dash for missing values.
