@@ -20,3 +20,6 @@ bash src/build.sh
 ```
 
 Rules for changes: no em dashes; text in buttons, rows and boxes stays on one line (ellipsis, never wrap); touch targets at least 44 pt; neutral iOS look with color only for meaning; keep the data shape of public.docs compatible; never commit `src/export` or personal data. Add a test to `vv3.js` for every new feature. Push only when `build.sh` prints `ALL TESTS PASS`; CI runs the same script on every push.
+
+## Launch animation
+- `#spl` in `src/coach/flying-pig.html` plays once on cold start (about 1.2 s, taps pass through, removed after). iOS launch images in `splash/` are its first frame; after changing the mark or `--bg`, run `node src/tools/make_splash.js` (sizes in `src/tools/splash_sizes.json`). iOS reads launch images only when the app is added to the home screen.

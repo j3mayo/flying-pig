@@ -27,6 +27,9 @@ for(const scheme of ['light','dark']){
  const ctx=await b.newContext({...devices['iPhone 13'],colorScheme:scheme,serviceWorkers:'block'});const pg=await ctx.newPage();const errs=[];pg.on('pageerror',e=>errs.push(e.message));await route(pg);
  await pg.addInitScript(()=>{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.clear();localStorage.setItem('mock-sess',JSON.stringify({user:{id:'u1'}}));}});
  await pg.goto('https://app.test/');await W(700);const P=scheme+': ';
+ ok(P+'launch animation covers the screen without blocking taps, then removes itself',await pg.evaluate(()=>{const e=document.getElementById('spl');return !!e&&getComputedStyle(e).pointerEvents==='none'&&!!e.querySelector('path.pl');})||!(await pg.$('#spl')));
+ ok(P+'iOS launch images are linked for each iPhone size',(await pg.$$eval('link[rel=apple-touch-startup-image]',x=>x.length))>=10);
+ await pg.waitForSelector('#spl',{state:'detached',timeout:3000}).catch(()=>{});ok(P+'launch animation is gone after it plays',!(await pg.$('#spl')));
  ok(P+'renamed to Healthspan',(await pg.title())==='Healthspan'&&await pg.evaluate(()=>document.querySelector('meta[name=apple-mobile-web-app-title]').content)==='Healthspan');
  ok(P+'five tabs: Today, Plan, Health, Fuel, You',(await pg.$$eval('.tab',x=>x.map(e=>e.dataset.tab).join(',')))==='today,plan,health,fuel,you');
  // Today: timeline with a button per session type

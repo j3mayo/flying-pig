@@ -24,6 +24,10 @@ head = f'''<!doctype html>
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 '''
+# iOS launch images (first frame of the launch animation); regenerate with src/tools/make_splash.js
+import json
+for w, h, r in json.loads((D.parent/"tools/splash_sizes.json").read_text()):
+    head += f'<link rel="apple-touch-startup-image" media="screen and (device-width: {w}px) and (device-height: {h}px) and (-webkit-device-pixel-ratio: {r}) and (orientation: portrait)" href="splash/{w*r}x{h*r}.png">\n'
 rep('<meta name="claude:viewport-fit-sides" content="cover">\n', '')
 src = head + src
 
