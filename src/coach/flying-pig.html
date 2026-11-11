@@ -348,20 +348,21 @@ button.num .k::after{content:" ›";color:var(--label-3)}
 .sugm{border:0;background:none;padding:0;text-align:left;color:inherit;cursor:pointer;min-width:0}
 input[type=number]{-moz-appearance:textfield;appearance:textfield}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-/* Launch: the H stands (same frame as the iOS launch image), the pulse draws through it, then the mark zooms through as the app shows. Cold start only, about 1.2 s, never blocks a tap. */
-.spl{--spl-lift:48px;position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center;pointer-events:none;animation:splOut .32s cubic-bezier(.4,0,1,1) .86s forwards}
-.spl svg{width:112px;height:112px;margin-bottom:var(--spl-lift);overflow:visible;animation:splMark .46s cubic-bezier(.5,0,.75,0) .72s forwards}
-.spl .pl{stroke-dasharray:1;stroke-dashoffset:1;animation:splDraw .56s cubic-bezier(.65,0,.35,1) .12s forwards}
+/* Launch: the iOS launch image is the plain background, so nothing has to line up across the handoff. The H fades in once the page has its final size, the pulse draws through it, then the mark zooms through as the app shows. Cold start only, about 1.3 s, never blocks a tap. */
+.spl{--spl-lift:48px;position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center;pointer-events:none;animation:splOut .32s cubic-bezier(.4,0,1,1) .94s forwards}
+.spl svg{width:112px;height:112px;margin-bottom:var(--spl-lift);overflow:visible;animation:splIn .24s cubic-bezier(.2,0,0,1) .04s both,splMark .46s cubic-bezier(.5,0,.75,0) .8s forwards}
+.spl .pl{stroke-dasharray:1;stroke-dashoffset:1;animation:splDraw .54s cubic-bezier(.65,0,.35,1) .22s forwards}
 @keyframes splDraw{to{stroke-dashoffset:0}}
 @keyframes splMark{0%{transform:scale(1)}28%{transform:scale(.92)}100%{transform:scale(7);opacity:0}}
+@keyframes splIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
 @keyframes splOut{to{opacity:0}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}
 .spl{animation:splOut .2s linear .3s forwards!important}.spl .pl{stroke-dashoffset:0}}
 </style>
 
 <div class="spl" id="spl" aria-hidden="true"><svg viewBox="0 0 512 512"><defs><linearGradient id="splG" x1="80" y1="0" x2="430" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#34D399"/><stop offset="1" stop-color="#4C8DFF"/></linearGradient></defs><rect x="128" y="102" width="44" height="308" rx="22" fill="#F2F2F2"/><rect x="340" y="102" width="44" height="308" rx="22" fill="#F2F2F2"/><path class="pl" pathLength="1" d="M80 268H170L205 190L250 345L290 228L315 268H430" fill="none" stroke="url(#splG)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-<script>/* Center the launch mark on the physical screen like the iOS launch image. In the home-screen app the page can start below the status bar (no top safe area) or end above the home indicator; stretch the cover by the missing height on that side. */
-(function(){var s=document.getElementById("spl");if(!s)return;var p=document.createElement("div");p.style.cssText="position:fixed;top:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden";document.body.appendChild(p);var t=p.offsetHeight;p.remove();var d=screen.height-innerHeight;if(d>4&&d<120){if(t>0)s.style.bottom=-d+"px";else s.style.top=-d+"px";}})();</script>
+<script>/* Center the launch mark on the physical screen like the iOS launch image. In the home-screen app the page can start below the status bar (no top safe area) or end above the home indicator, and iOS can settle that size after the first frame; stretch the cover by the missing height on that side, again on every resize. */
+(function(){var s=document.getElementById("spl");if(!s)return;function fit(){if(!s.isConnected){removeEventListener("resize",fit);return;}var p=document.createElement("div");p.style.cssText="position:fixed;top:0;padding-top:env(safe-area-inset-top,0px);visibility:hidden";document.body.appendChild(p);var t=p.offsetHeight;p.remove();var d=screen.height-innerHeight;s.style.top=s.style.bottom="";if(d>4&&d<120){if(t>0)s.style.bottom=-d+"px";else s.style.top=-d+"px";}}fit();addEventListener("resize",fit);})();</script>
 <header class="nav" id="nav"><div class="nav-in"><span class="nav-btn" aria-hidden="true" style="visibility:hidden">Log</span><span class="nav-title" id="navTitle">Today</span><button class="nav-btn" id="logBtn" type="button" aria-label="Log something"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div></header>
 <div class="wrap"><main id="view"><h1 class="large">Today</h1><div class="sub">Loading your plan…</div></main></div>
 
