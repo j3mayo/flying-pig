@@ -122,7 +122,8 @@ for(const scheme of ['light','dark']){
  await pg.tap('[data-pseg="runs"]');await W(200);ok(P+'paces list is read out, not hidden behind a label',!(await pg.$('#view [data-act="paces"][aria-label]')));
  ok(P+'Plan shows runs: this week, paces, at most five recent runs',(await pg.textContent('#view')).includes('Recent runs')&&(await pg.$$('#view [data-act="rundetail"]')).length<=5&&!!(await pg.$('#view [data-act="paces"]')));
  if(await pg.$('#view [data-act="allruns"]')){await pg.tap('#view [data-act="allruns"]');await W(300);ok(P+'All runs opens every run',(await pg.$$('.sh [data-act="rundetail"]')).length===(await pg.evaluate(()=>Object.keys(__store).filter(k=>k.startsWith('runs/')).length)));await pg.tap('.sh [data-act="close"]');await W(200);}
- await pg.tap('[data-pseg="lifts"]');await W(200);ok(P+'Lifts no longer repeats the strength chart',!(await pg.textContent('#view')).includes('Strength progress')&&(await pg.textContent('#view')).includes('History'));await pg.tap('[data-pseg="runs"]');await W(200);
+ await pg.tap('[data-pseg="lifts"]');await W(200);ok(P+'loads show plain numbers, no "s" after dumbbell weights',!/\b\d+(\.\d+)?s\b/.test(await pg.textContent('#view'))&&await pg.evaluate(()=>Object.entries(__store).some(([k,v])=>k.startsWith('loads/')&&/\ds$/.test(String(v.load||'')))));
+ ok(P+'Lifts no longer repeats the strength chart',!(await pg.textContent('#view')).includes('Strength progress')&&(await pg.textContent('#view')).includes('History'));await pg.tap('[data-pseg="runs"]');await W(200);
  await pg.tap('[data-act="rundetail"] >> nth=0');await W(250);ok(P+'tapping a run opens its detail',(await pg.$$eval('.sh .row .t',x=>x.map(e=>e.textContent))).join(',').includes('Avg heart rate'));await pg.tap('.sh [data-act="close"]');await W(200);
  await pg.tap('[data-pseg="lifts"]');await W(200);ok(P+'Plan shows lifts',!!(await pg.$('[data-lday="A"]')));
  await pg.evaluate(()=>{location.hash='runs';});await W(250);ok(P+'old #runs link opens Plan > Runs',(await pg.getAttribute('[data-pseg="runs"]','aria-pressed'))==='true');
@@ -191,7 +192,7 @@ for(const scheme of ['light','dark']){
  // Lifts: alternatives as a request
  await pg.tap('.tab[data-tab="plan"]');await W(200);await pg.tap('[data-pseg="lifts"]');await W(150);await pg.tap('[data-lday="A"]');await W(150);await pg.tap('[data-act="exinfo"][data-id="a1"]');await W(250);
  const alts=await pg.$$eval('[data-act="altreq"]',x=>x.map(e=>e.textContent));
- ok(P+'Smith bench offers equivalent swaps with scaled loads',alts.some(t=>t.includes('Flat DB bench')&&t.includes('55s'))&&alts.some(t=>t.includes('Push-up')&&t.includes('4 x 12')),alts.slice(0,3).join(' | '));
+ ok(P+'Smith bench offers equivalent swaps with scaled loads',alts.some(t=>t.includes('Flat DB bench')&&t.includes('55')&&!/\d+s\b/.test(t))&&alts.some(t=>t.includes('Push-up')&&t.includes('4 x 12')),alts.slice(0,3).join(' | '));
  const before=await pg.evaluate(()=>Object.keys(__store).filter(k=>k.startsWith('requests/')).length);
  await pg.tap('[data-act="altreq"] >> nth=0');await W(300);
  ok(P+'tapping a swap sends a request',await pg.evaluate(n=>Object.keys(__store).filter(k=>k.startsWith('requests/')).length===n+1,before));

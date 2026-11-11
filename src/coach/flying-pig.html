@@ -398,6 +398,8 @@ function toSec(t){ if(t==null||t==="") return null; const p = String(t).trim().s
 function fmtTime(sec){ if(!sec) return NA; sec=Math.round(sec); const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60), s=sec%60; return h? h+":"+pad(m)+":"+pad(s) : m+":"+pad(s); }
 const pace = r => (r.miles && r.timeSec) ? r.timeSec/r.miles : null;
 const NA="No data";
+/* Dumbbell loads are per hand; "30s" and "30" mean the same, so show and compute plain numbers. */
+const noS = v => typeof v==="string" ? v.replace(/(\d(?:\.\d+)?)s\b/g,"$1") : v;
 const paceMi = p => p ? fmtPace(p)+" /mi" : "No pace yet";
 const fmtPace = p => { if(!p) return NA; p=Math.round(p); return Math.floor(p/60)+":"+pad(p%60); };
 const sum = a => a.reduce((x,y)=>x+(+y||0),0);
@@ -1360,7 +1362,7 @@ function optFactor(pat,name){ const n=String(name||"").toLowerCase(); const o=(P
 function refLoad(e,pat){ const f=optFactor(pat,e.name), n=numLoad(e.load); if(f&&n) return n/f;
   for(const s of S.loads){ if(s.id!==e.id&&patOf(s)===pat){ const sf=optFactor(pat,s.name), sn=numLoad(s.load); if(sf&&sn) return sn/sf; } } return null; }
 function altLoad(ref,o){ const eq=o[1], f=o[2]; if(eq==="bw") return "BW"; if(eq==="band") return "Band"; if(!f||!ref) return "Pick a load";
-  let v=ref*f; const step=(eq==="db"||eq==="one"||eq==="kb")&&v<12?2.5:5; v=Math.max(step, Math.round(v/step)*step); return eq==="db"?v+"s":String(v); }
+  let v=ref*f; const step=(eq==="db"||eq==="one"||eq==="kb")&&v<12?2.5:5; v=Math.max(step, Math.round(v/step)*step); return String(v); }
 function alternatives(e){ const pat=patOf(e); if(!pat) return []; const ref=refLoad(e,pat), cur=String(e.name||"").toLowerCase();
   return PAT[pat].filter(o=>o[0].toLowerCase()!==cur).map(o=>({name:o[0], eq:o[1], load:altLoad(ref,o), scheme:o[3]||e.scheme||"3 x 10", pattern:pat})); }
 const altRows = (list, act, extra) => list.map((a,k)=>`<button class="row" type="button" data-w="${act}" data-act="${act}" data-k="${k}" ${extra||""}><div class="main"><div class="t">${esc(a.name)}</div><div class="s">${esc(EQ[a.eq]||"")}</div></div><div class="v">${esc([a.load,a.scheme].filter(Boolean).join(" · "))}</div></button>`).join("");
@@ -1561,8 +1563,8 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
   const byDate=(s,k)=>{ S[k]={}; s.docs.forEach(d=>{ const v=d.data(); S[k][v.date||d.id]=v; }); };
   db.collection("plan").onSnapshot(s=>{ byDate(s,"plan"); mark(s); },err);
   db.collection("runs").onSnapshot(s=>{ S.runs=s.docs.map(d=>Object.assign({id:d.id},d.data())); mark(s); },err);
-  db.collection("loads").onSnapshot(s=>{ S.loads=s.docs.map(d=>Object.assign({id:d.id},d.data())); mark(s); },err);
-  db.collection("liftlog").onSnapshot(s=>{ S.liftlog={}; s.docs.forEach(d=>{ const v=d.data(); S.liftlog[d.id]=Object.assign({date:d.id.split("~")[0]}, v); }); mark(s); },err);
+  db.collection("loads").onSnapshot(s=>{ S.loads=s.docs.map(d=>{ const v=Object.assign({id:d.id},d.data()); v.load=noS(v.load); if(Array.isArray(v.history)) v.history=v.history.map(h=>Object.assign({},h,{load:noS(h.load)})); return v; }); mark(s); },err);
+  db.collection("liftlog").onSnapshot(s=>{ S.liftlog={}; s.docs.forEach(d=>{ const v=d.data(); (v.exercises||[]).forEach(e=>(e.sets||[]).forEach(x=>{ x.load=noS(x.load); })); (v.done||[]).forEach(x=>{ x.load=noS(x.load); }); S.liftlog[d.id]=Object.assign({date:d.id.split("~")[0]}, v); }); mark(s); },err);
   db.collection("daily").onSnapshot(s=>{ byDate(s,"daily"); mark(s); },err);
   db.doc("settings/main").onSnapshot(d=>{ S.settings=d.exists?d.data():{}; queue(); },()=>{});
   db.doc("settings/gear").onSnapshot(d=>{ S.gear=d.exists?d.data():null; queue(); },()=>{});
