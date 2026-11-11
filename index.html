@@ -370,8 +370,8 @@ button.num .k::after{content:" ›";color:var(--label-3)}
 input[type=number]{-moz-appearance:textfield;appearance:textfield}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 /* Launch: the H stands (same frame as the iOS launch image), the pulse draws through it, then the mark zooms through as the app shows. Cold start only, about 1.2 s, never blocks a tap. */
-.spl{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center;pointer-events:none;animation:splOut .32s cubic-bezier(.4,0,1,1) .86s forwards}
-.spl svg{width:112px;height:112px;overflow:visible;animation:splMark .46s cubic-bezier(.5,0,.75,0) .72s forwards}
+.spl{--spl-lift:48px;position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center;pointer-events:none;animation:splOut .32s cubic-bezier(.4,0,1,1) .86s forwards}
+.spl svg{width:112px;height:112px;margin-bottom:var(--spl-lift);overflow:visible;animation:splMark .46s cubic-bezier(.5,0,.75,0) .72s forwards}
 .spl .pl{stroke-dasharray:1;stroke-dashoffset:1;animation:splDraw .56s cubic-bezier(.65,0,.35,1) .12s forwards}
 @keyframes splDraw{to{stroke-dashoffset:0}}
 @keyframes splMark{0%{transform:scale(1)}28%{transform:scale(.92)}100%{transform:scale(7);opacity:0}}
@@ -1793,6 +1793,6 @@ window.addEventListener("hashchange",()=>{ const h=routeTab(location.hash.slice(
 })();
 </script>
 
-<script>window.FP_VERSION="2026.11.11.2119";</script>
+<script>window.FP_VERSION="2026.11.11.2157";</script>
 <script>if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{ r.update().catch(()=>{}); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") r.update().catch(()=>{}); }); }).catch(()=>{}); let fpRel=false; navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(fpRel) return; fpRel=true; if(!document.getElementById("dlg").open) location.reload(); });</script>
 </body></html>
