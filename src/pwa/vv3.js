@@ -348,7 +348,15 @@ for(const scheme of ['light','dark']){
  ok(P+'nav bar is clear at the top and collapses on scroll',!(await pg.$('#nav.scrolled'))&&await pg.evaluate(async()=>{window.scrollTo(0,300);await new Promise(r=>setTimeout(r,250));return document.getElementById('nav').classList.contains('scrolled');}));
  await pg.evaluate(()=>window.scrollTo(0,0));await W(200);
  ok(P+'health citations sit behind one row, not on the page',!!(await pg.$('[data-act="healthwhy"]'))&&!(await pg.$('#view .why')));
+ await pg.tap('.tab[data-tab="plan"]');await W(200);await pg.tap('[data-pseg="schedule"]');await W(250);
+ ok(P+'rest days read as plain text, not a rest-timer box',!(await pg.$('#view .act.rest'))&&await pg.$$eval('#view .act.off',x=>x.every(e=>getComputedStyle(e).backgroundColor==='rgba(0, 0, 0, 0)')));
+ await pg.tap('[data-pseg="program"]');await W(250);
+ if(await pg.$('#view [data-act="tailored"]')){await pg.tap('#view [data-act="tailored"]');await W(250);ok(P+'tailoring opens as a sheet, not a wall of text on Program',(await pg.$$('.sh .steps li')).length>=1&&!(await pg.$('#view .steps')));await pg.tap('.sh [data-act="close"]');await W(200);}
+ await pg.tap('[data-pseg="lifts"]');await W(250);
+ ok(P+'lift history skips sessions with nothing logged',await pg.$$eval('#view .sec:last-of-type .row .v',x=>x.every(e=>!/^0 sets$/.test(e.textContent.trim()))));
+ await pg.tap('[data-pseg="schedule"]');await W(200);
  await pg.tap('.tab[data-tab="you"]');await W(250);
+ ok(P+'goal rows carry no repeated icon',!(await pg.$('#view [data-act="goal"] .ico')));
  ok(P+'milestone titles are not cut short',await pg.$$eval('#view .ms-row .t',x=>x.length>=3&&x.every(e=>e.scrollWidth<=e.clientWidth+1)));
  for(const t of ['today','plan','health','fuel','you']){await pg.tap(`.tab[data-tab="${t}"]`);await W(150);if(await pg.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth))ok(P+t+' no sideways scroll',false);}
  ok(P+'no sideways scroll on any tab',true);
