@@ -35,7 +35,10 @@ const METRICS: Record<string, [string, (item: Record<string, unknown>, units: st
   resting_heart_rate: ["rhr", (i) => (num(i.qty) == null ? null : Math.round(num(i.qty)!))],
   heart_rate_variability: ["hrv", (i) => (num(i.qty) == null ? null : Math.round(num(i.qty)!))],
   sleep_analysis: ["sleep", (i) => {
-    const v = num(i.asleep) ?? num(i.totalSleep) ?? num(i.qty);
+    // Apple sleep stages leave "asleep" at 0 and put the night in totalSleep or in core + deep + rem
+    const pos = (x: number | null) => (x != null && x > 0 ? x : null);
+    const stages = [i.core, i.deep, i.rem].map(num).filter((x): x is number => x != null && x > 0);
+    const v = pos(num(i.totalSleep)) ?? pos(num(i.asleep)) ?? pos(stages.length ? stages.reduce((a, b) => a + b, 0) : null) ?? pos(num(i.qty));
     return v == null ? null : r1(v);
   }],
   weight_body_mass: ["weight", (i, u) => (num(i.qty) == null ? null : r1(toLb(num(i.qty)!, u)))],
@@ -89,7 +92,7 @@ Deno.serve(async (req: Request) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
       const v = fn(item, units);
       if (v == null) continue;
-      (dailyPatch[d] ||= {})[field] = field === "steps" ? Number(dailyPatch[d][field] || 0) + v : v; // steps arrive as samples: add them up per day
+      (dailyPatch[d] ||= {})[field] = field === "steps" ? Number(dailyPatch[d][field] || 0) + v : field === "sleep" ? Math.max(Number(dailyPatch[d][field] || 0), v) : v; // steps arrive as samples: add them up per day
     }
   }
   const dayIds = Object.keys(dailyPatch);
@@ -101,8 +104,8 @@ Deno.serve(async (req: Request) => {
     const next = { ...cur };
     let changed = false;
     for (const [k, v] of Object.entries(dailyPatch[d])) {
-      if (k === "steps") {
-        // partial exports can re-send a day: keep the largest total seen for that day
+      if (k === "steps" || k === "sleep") {
+        // partial exports can re-send a day (a sync at 3 AM sends half a night): keep the largest total seen for that day
         const cur = Number(next[k] || 0);
         if (Number(v) > cur) { next[k] = v; changed = true; }
       } else if (next[k] == null || next[k] === "") {

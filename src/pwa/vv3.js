@@ -307,6 +307,17 @@ for(const scheme of ['light','dark']){
  await pg.tap('#view [data-act="fuelinfo"][data-i="caffeine"]');await W(250);ok(P+'caffeine guide cites a source',/Guest et al/.test(await pg.textContent('.sh')));await pg.tap('.sh [data-act="close"]');await W(200);
  // Readiness verdict, lift color split
  await pg.tap('.tab[data-tab="today"]');await W(250);
+ ok(P+'no sync warning while watch data is fresh',!(await pg.$('.syncwarn'))||await pg.evaluate(()=>{const l=(__store['settings/import']||{}).lastAt;return !l||Date.now()-new Date(l).getTime()>16*3600e3;}));
+ await pg.evaluate(()=>{const d={lastAt:new Date(Date.now()-21*3600e3).toISOString(),source:'hae',runsAdded:0,runsUpdated:0,days:0};__store['settings/import']=d;__rt({eventType:'UPDATE',new:{coll:'settings',id:'import',data:d}});});await W(400);
+ ok(P+'a stalled watch sync shows a warning on Today',!!(await pg.$('#view .syncwarn'))&&/Last arrived/.test(await pg.textContent('#view .syncwarn')));
+ await pg.tap('#view .syncwarn');await W(300);ok(P+'the warning opens Watch sync with the recovery steps',(await pg.textContent('.sh-nav .ttl'))==='Watch sync'&&(await pg.textContent('.sh-body')).includes('When data stops arriving'));await pg.tap('.sh [data-act="close"]');await W(200);
+ await pg.evaluate(()=>{const d={lastAt:new Date().toISOString(),source:'hae',runsAdded:0,runsUpdated:0,days:0};__store['settings/import']=d;__rt({eventType:'UPDATE',new:{coll:'settings',id:'import',data:d}});});await W(400);
+ ok(P+'the warning clears once data arrives',!(await pg.$('#view .syncwarn')));
+ { const tk=await pg.evaluate(()=>{const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');});
+   const saved=await pg.evaluate(k=>JSON.stringify(__store['daily/'+k]||null),tk);
+   await pg.evaluate(k=>{const d=Object.assign({},__store['daily/'+k]||{date:k});delete d.sleep;__store['daily/'+k]=d;__rt({eventType:'UPDATE',new:{coll:'daily',id:k,data:d}});const y=new Date(k+'T12:00:00');y.setDate(y.getDate()-1);const yk=y.toISOString().slice(0,10);const yd=Object.assign({date:yk},__store['daily/'+yk]||{},{sleep:5.1});__store['daily/'+yk]=yd;__rt({eventType:'UPDATE',new:{coll:'daily',id:yk,data:yd}});},tk);await W(400);
+   ok(P+'readiness never passes off the night before as last night',(await pg.textContent('.ready .s')).includes('not synced')&&!/Slept 5\.1/.test(await pg.textContent('.ready .s')));
+   await pg.evaluate(([k,v])=>{const d=v?JSON.parse(v):{date:k};__store['daily/'+k]=d;__rt({eventType:'UPDATE',new:{coll:'daily',id:k,data:d}});},[tk,saved]);await W(300); }
  ok(P+'Today opens with a readiness verdict',/^(Go as planned|Take it easy today|Rest or very easy|Readiness unknown)$/.test(await pg.textContent('.ready .t')),await pg.textContent('.ready .t'));
  ok(P+'readiness reads the seeded data as recovered',(await pg.textContent('.ready .t'))==='Go as planned',await pg.textContent('.ready .s'));
  await pg.tap('.ready');await W(250);ok(P+'readiness sheet explains the inputs',(await pg.textContent('.sh-nav .ttl'))==='Readiness'&&(await pg.textContent('.sh-body')).includes('HRV, 7-day average'));await pg.tap('.sh [data-act="close"]');await W(200);

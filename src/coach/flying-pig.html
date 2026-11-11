@@ -287,6 +287,7 @@ dialog.sheet .sh-nav{padding-top:0;min-height:50px;background:transparent;-webki
 .tdot{position:absolute;left:-22px;top:22px;width:12px;height:12px;border-radius:6px;background:var(--c);box-shadow:0 0 0 3px var(--bg)}
 .tlc{background:var(--card);border-radius:var(--r-card);padding:13px 12px 13px 14px;display:flex;align-items:center;gap:10px;min-height:66px}
 .tlc .main{flex:1;min-width:0}
+.syncwarn{margin-top:16px;background:color-mix(in srgb,var(--warn) 14%,var(--card));border-radius:var(--r-card)}.syncwarn .dot{width:10px;height:10px;border-radius:5px;background:var(--warn);flex:none}
 .focusbox{margin-top:14px;padding-left:0}.focusbox::before{display:none}.focusbox .tdot{display:none}
 .tli.next .tlc{flex-direction:column;align-items:stretch;gap:14px;padding:16px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 55%,transparent)}
 .tli.next .t{font-size:20px}.tli.next .s{font-size:15px}.tli.next .go{width:100%;min-height:48px;font-size:17px}
@@ -551,11 +552,11 @@ function readiness(t){
   const hrv7=mean(dvals("hrv",addDays(t,-6),t)), hrvB=mean(dvals("hrv",addDays(t,-20),addDays(t,-7)));
   const rhr7=mean(dvals("rhr",addDays(t,-6),t)), rhrB=mean(dvals("rhr",addDays(t,-20),addDays(t,-7)));
   const last=S.daily[t]||{}, y=S.daily[addDays(t,-1)]||{};
-  const sleep=last.sleep!=null&&last.sleep!==""?+last.sleep:(y.sleep!=null&&y.sleep!==""?+y.sleep:null);
+  const has=v=>v!=null&&v!=="", sleepOld=!has(last.sleep)&&has(y.sleep), sleep=has(last.sleep)?+last.sleep:(sleepOld?+y.sleep:null);
   const sore=Math.max(last.soreness!=null?+last.soreness:-1, y.soreness!=null?+y.soreness:-1);
   const lowE=[last,y].filter(x=>x.energy!=null&&+x.energy<=2).length;
   const hrvCh=hrv7!=null&&hrvB?(hrv7-hrvB)/hrvB:null, rhrUp=rhr7!=null&&rhrB!=null?rhr7-rhrB:null;
-  const facts={hrv7, hrvB, rhr7, rhrB, sleep, sore, lowE, hrvCh, rhrUp};
+  const facts={hrv7, hrvB, rhr7, rhrB, sleep, sleepOld, sore, lowE, hrvCh, rhrUp};
   if(hrv7==null&&rhr7==null&&sleep==null&&!lowE&&sore<0) return Object.assign({lvl:"none", t:"Readiness unknown", s:"Needs watch data or a check-in", c:"var(--label-3)"}, facts);
   if(sore>=7) return Object.assign({lvl:"low", t:"Rest or very easy", s:`Soreness ${sore} of 10, keep loads where they are`, c:"var(--bad)"}, facts);
   if(hrvCh!=null&&hrvCh<=-.15&&rhrUp!=null&&rhrUp>=2&&(lowE||sore>=5)) return Object.assign({lvl:"low", t:"Rest or very easy", s:`HRV ${Math.round(hrv7)}, ${Math.round(-hrvCh*100)}% under baseline, resting HR up ${Math.round(rhrUp)}`, c:"var(--bad)"}, facts);
@@ -563,10 +564,10 @@ function readiness(t){
   if(lowE>=2) why.push("Energy low two check-ins in a row");
   if(hrvCh!=null&&hrvCh<=-.10) why.push(`HRV ${Math.round(hrv7)}, ${Math.round(-hrvCh*100)}% under your baseline`);
   if(rhrUp!=null&&rhrUp>=3) why.push(`Resting HR up ${Math.round(rhrUp)} bpm on the week`);
-  if(sleep!=null&&sleep<6) why.push(`Slept ${sleep} h`);
+  if(sleep!=null&&!sleepOld&&sleep<6) why.push(`Slept ${sleep} h`);
   if(sore>=5) why.push(`Soreness ${sore} of 10`);
   if(why.length) return Object.assign({lvl:"watch", t:"Take it easy today", s:why[0], c:"var(--warn)"}, facts);
-  const ok=[]; if(hrv7!=null) ok.push(`HRV ${Math.round(hrv7)}`); if(rhr7!=null) ok.push(`RHR ${Math.round(rhr7)}`); if(sleep!=null) ok.push(`${sleep} h sleep`);
+  const ok=[]; if(hrv7!=null) ok.push(`HRV ${Math.round(hrv7)}`); if(rhr7!=null) ok.push(`RHR ${Math.round(rhr7)}`); if(sleepOld) ok.push("last night's sleep not synced"); else if(sleep!=null) ok.push(`${sleep} h sleep`);
   return Object.assign({lvl:"good", t:"Go as planned", s:(ok.length?ok.join(" · ")+", ":"")+"near your baseline", c:"var(--rec)"}, facts);
 }
 function readySheet(){ const t=todayISO(), r=readiness(t), last=S.daily[t]||{}, y=S.daily[addDays(t,-1)]||{};
@@ -576,7 +577,7 @@ function readySheet(){ const t=todayISO(), r=readiness(t), last=S.daily[t]||{}, 
     <div class="cap">What it looks at</div><div class="group">
     ${row("HRV, 7-day average", r.hrv7!=null?Math.round(r.hrv7)+" ms":NA, pct(r.hrv7,r.hrvB))}
     ${row("Resting HR, 7-day average", r.rhr7!=null?Math.round(r.rhr7)+" bpm":NA, r.rhrUp!=null?`${r.rhrUp>0?"+":""}${Math.round(r.rhrUp)} bpm vs baseline`:"No baseline yet")}
-    ${row("Sleep, last night", r.sleep!=null?r.sleep+" h":NA, "7 or more hours is the target")}
+    ${row("Sleep, last night", r.sleepOld?"Not synced yet":r.sleep!=null?r.sleep+" h":NA, r.sleepOld?`Night before: ${r.sleep} h`:"7 or more hours is the target")}
     ${row("Check-in", last.energy!=null?`Energy ${last.energy} · Soreness ${last.soreness!=null?last.soreness:NA}`:(y.energy!=null?`Yesterday: energy ${y.energy} · soreness ${y.soreness!=null?y.soreness:NA}`:"None yet"), "")}
     </div>
     <div class="cap" style="padding-top:18px">How it decides</div><div class="group"><p class="para">Rest or very easy when soreness is 7 or more, or when HRV is 15% or more under your two-week baseline while resting HR is up and you feel low. Take it easy when energy is low two days running, HRV is 10% under baseline, resting HR is up 3 or more, sleep was under 6 hours, or soreness is 5 or more. Otherwise, go as planned. The coach applies the same rules at its 9 AM review; this is your own read on them.</p></div></div>`); }
@@ -596,6 +597,7 @@ function viewToday(){
   const pk=Object.keys(S.plan).sort(), start=pk[0]&&pk[0]<t?pk[0]:"2026-10-24", left=daysBetween(t,RACE), fill=Math.max(2,Math.min(100,Math.round(daysBetween(start,t)/Math.max(1,daysBetween(start,RACE))*100)));
   return `<h1 class="large dt1">${esc(longDate(d).replace(/^(\w+), (\w{3})\w* /,"$1, $2 "))}</h1>
   <div class="cd" role="img" aria-label="${left} days until race day"><div class="cdt"><span class="tk">Race in ${left} days</span>${d!==t?`<button class="lnk back" type="button" data-sday="${t}">Back to today</button>`:`<span class="cdd">${esc(shortDate(RACE))}</span>`}</div><div class="cdb"><i style="width:${fill}%"></i></div></div>
+  ${d===t&&syncStale()?`<button class="row syncwarn" type="button" data-act="watchsync"><span class="dot" aria-hidden="true"></span><div class="main"><div class="t">Watch data is behind</div><div class="s">Last arrived ${esc(ago(S.import.lastAt))}${S.daily[t]&&S.daily[t].sleep!=null?"":" · no sleep yet for today"}</div></div>${CHEV}</button>`:""}
   ${d===t?(()=>{ const r=readiness(t); return `<button class="ready" type="button" data-act="ready" style="--c:${r.c}" aria-label="Readiness: ${esc(r.t)}"><i class="dot"></i><div class="main"><div class="t">${esc(r.t)}</div><div class="s">Readiness · ${esc(r.s)}</div></div>${CHEV}</button>`; })():""}
   ${focus?`<div class="tl focusbox">${focus}</div>`:""}
   <div class="bars" role="group" aria-label="This week">${tile(r1(actMi),r1(planMi),"Miles","var(--run)")}${tile(liftsDone,liftPlan,"Lifts","var(--lift)")}${tile(pt.done,pt.n,"PT days","var(--pt)")}</div>
@@ -818,6 +820,7 @@ async function pushToggle(){ const st=FP.pushState?await FP.pushState():"unsuppo
   if(st==="denied"){ toast("Turn notifications on in iOS Settings for Healthspan"); return; }
   try{ if(st==="on"){ await FP.pushUnsubscribe(); toast("Notifications off"); } else { const r=await FP.pushSubscribe(); toast(r==="on"?"Notifications on":"Notifications not allowed"); } }catch(err){ toast("Couldn't turn on notifications"); }
   refreshPush(); }
+const syncStale=()=>!!(S.import&&S.import.lastAt)&&(Date.now()-new Date(S.import.lastAt).getTime())>16*3600*1000;
 const syncLabel=()=>S.import&&S.import.lastAt?`Last run from the watch ${ago(S.import.lastAt)}`:"Not set up";
 async function watchSheet(){
   openSheet(navBar(navBtn("close","Close"),"Watch sync","")+`<div class="sh-body"><div class="hero"><div class="big" style="font-size:22px">${S.import&&S.import.lastAt?"Synced "+esc(ago(S.import.lastAt)):"Not set up yet"}</div><div class="foot" style="padding:4px 0 0">${S.import&&S.import.lastAt?`${esc(String(S.import.runsAdded||0))} run${S.import.runsAdded===1?"":"s"} added last time`:"Runs and health numbers arrive minutes after a workout once this is on."}</div></div>
@@ -826,6 +829,10 @@ async function watchSheet(){
     <li>Paste the URL below. Method POST, format JSON.</li>
     <li>Turn on Workouts. Pick metrics: resting heart rate, heart rate variability, sleep, weight, VO2 max, steps.</li>
     <li>Period: since last sync. Turn on automatic runs.</li></ol></div>
+    <div class="cap" style="padding-top:18px">When data stops arriving</div><div class="group"><ol class="steps">
+    <li>Open Health Auto Export. iPhone health data is locked while the phone is locked, so the app can only send after you unlock it.</li>
+    <li>Automations, then this REST API automation, then Manual Export for the last 3 days. Missing sleep and HRV fill in.</li>
+    <li>In iPhone Settings, General, Background App Refresh: keep it on for Health Auto Export, and do not swipe the app closed.</li></ol></div>
     <div class="cap" style="padding-top:18px">Your URL</div><div class="group"><p class="para" id="haeUrl" style="font:13px/1.5 var(--mono);word-break:break-all;color:var(--label-2)">Loading…</p></div>
     <div style="margin-top:12px"><button class="btn-big sec2" type="button" data-act="copyurl">Copy URL</button></div>
     <div class="foot">The URL carries your private import key. Until this is set up, the coach imports from your Drive folder at its 9 AM review.</div></div>`);
