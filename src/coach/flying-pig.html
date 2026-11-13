@@ -791,7 +791,7 @@ function viewLifts(){
   const sessions=Object.values(S.liftlog).filter(s=>s.status==="in_progress"||!s.exercises||s.exercises.some(e=>(e.sets||[]).some(x=>x.done))).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
   return `<div class="chips" role="group" aria-label="Lift day">${["A","B","C","D","P"].map(d=>`<button type="button" class="chip" data-lday="${d}" aria-pressed="${d===liftDay}" aria-label="${d==="P"?"PT session":"Day "+d}">${d==="P"?"PT":d}</button>`).join("")}</div>
   <div class="sec" style="margin-top:16px"><div class="sec-h"><h2>${liftDay==="P"?"":"Day "+esc(liftDay)+" · "}${esc(LIFT_NAMES[liftDay])}</h2></div><div class="group">${list||'<div class="empty">No exercises saved.</div>'}</div>
-    <div style="margin-top:12px"><button class="btn-big" type="button" data-act="workout" data-day="${liftDay}">${liftDay==="P"?"Start PT Session":"Start Day "+liftDay}</button></div></div>
+    <div style="margin-top:12px">${liftDay==="P"?`<button class="btn-big" type="button" data-act="ptsess" data-d="${t}">Check off today's PT</button>`:`<button class="btn-big" type="button" data-act="workout" data-day="${liftDay}">Start Day ${liftDay}</button>`}</div></div>
   <div class="sec"><div class="sec-h"><h2>History</h2><button class="lnk" type="button" data-act="loglift">Quick log</button></div><div class="group">${sessions.length? sessions.map(s=>`<div class="row"><div class="main"><div class="t">Day ${esc(s.day)} · ${esc(fmtDate(s.date))}</div>${s.notes?`<div class="s">${esc(s.notes)}</div>`:""}</div>${s.exercises?`<div class="v">${s.exercises.reduce((a,e)=>a+e.sets.filter(x=>x.done).length,0)} sets</div>`:""}${s.exercises&&s.exercises.some(e=>(e.sets||[]).some(x=>x.pr))?'<span class="pill good">PR</span>':""}${s.status==="in_progress"?'<span class="pill warn">Open</span>':""}</div>`).join(""):'<div class="empty">No sessions yet.</div>'}</div><div class="foot">Strength trends live on the Health tab.</div></div>`;
 }
 
@@ -961,7 +961,7 @@ function chooser(){
 }
 function liftSheet(day, viewOnly){
   const ex=exFor(day);
-  openSheet(navBar(navBtn("close","Close"),day==="P"?"PT Session":`Day ${esc(day)}<small>${esc(LIFT_NAMES[day]||"")}</small>`,"")+`<div class="sh-body"><div class="group">${ex.map(exRow).join("")}</div>${viewOnly?'<div class="foot">You can start this on the day it is planned.</div>':`<div style="margin-top:14px"><button class="btn-big" type="button" data-act="workout" data-day="${esc(day)}">Start workout</button></div>`}</div>`);
+  openSheet(navBar(navBtn("close","Close"),day==="P"?"PT":`Day ${esc(day)}<small>${esc(LIFT_NAMES[day]||"")}</small>`,"")+`<div class="sh-body"><div class="group">${ex.map(exRow).join("")}</div>${viewOnly?'<div class="foot">You can start this on the day it is planned.</div>':day==="P"?`<div style="margin-top:14px"><button class="btn-big" type="button" data-act="ptsess" data-d="${todayISO()}">Check off today's PT</button></div>`:`<div style="margin-top:14px"><button class="btn-big" type="button" data-act="workout" data-day="${esc(day)}">Start workout</button></div>`}</div>`);
 }
 let exAlt=[], exAltFor=null;
 function exSheet(id){
@@ -1188,6 +1188,9 @@ function startWorkout(day){
   /* Sessions started before the split: break any comma-listed warm-up or cool-down into one checkbox per move. */
   W.exercises=W.exercises.flatMap(e=>{ if(!e.simple||!/,/.test(e.name)) return [e]; const parts=splitSimple(Object.assign({}, S.loads.find(l=>l.id===e.id)||{}, {id:e.id, name:e.name, block:e.block, pt:e.pt}));
     const was=!!(e.sets&&e.sets[0]&&e.sets[0].done); parts.forEach(x=>{ x.sets[0].done=was; }); return parts; });
+  /* A session started before a loads change (for example PT moves leaving the lifts) still carries the old moves: keep only what is in this day's plan now. Added (x-) and swapped (~) moves stay. */
+  if(W.day!=="P"){ const cur=exFor(W.day), ids=new Set(cur.map(e=>e.id)), simpleNames=new Set(cur.filter(e=>!e.scheme||e.block==="Prep"||e.block==="Finish").flatMap(splitSimple).map(x=>x.name));
+    W.exercises=W.exercises.filter(e=>{ const id=String(e.id); if(id.startsWith("x-")) return true; const base=id.split("~")[0].replace(/-\d+$/,""); return ids.has(base)&&(!e.simple||simpleNames.has(e.name)); }); }
   wResume(); wDel=""; wDiscard=false; wEnd=W.restEnd&&W.restEnd>Date.now()?W.restEnd:0; wNext=W.restNext||"";
   try{ localStorage.setItem("fp-w-open", day); }catch(_){}
   dlg.className="full"; renderWorkout(); if(!dlg.open) dlg.showModal(); try{ sh.focus({preventScroll:true}); }catch(_){}

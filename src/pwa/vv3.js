@@ -72,6 +72,10 @@ for(const scheme of ['light','dark']){
  ok(P+'both sessions are kept for the day',await pg.evaluate(t=>__store['liftlog/'+t].day==='C'&&__store['liftlog/'+t+'~P']&&__store['liftlog/'+t+'~P'].status==='done',tday));
  await pg.tap('.sh [data-act="close"]');await W(250);
  ok(P+'timeline shows both as done',(await pg.$$('.tli.done')).length>=2);
+ await pg.evaluate(t=>{const row={date:t,day:'C',status:'in_progress',exercises:[{id:'c0-9',name:'Old warm-up move',block:'Prep',simple:true,pt:true,sets:[{done:false}]},{id:'c1',name:'Speed Smith squat',block:'A1',target:'95 · 5 x 3',sets:[{load:'95',reps:'3',done:true}]},{id:'c99',name:'Stale PT move',block:'D1',target:'10 · 3 x 10',pt:true,sets:[{load:'10',reps:'10',done:false}]}]};__store['liftlog/'+t]=row;__rt({eventType:'UPDATE',new:{coll:'liftlog',id:t,data:row}});localStorage.removeItem('fp-w');},tday);await W(300);
+ await pg.tap('.tlc [data-act="workout"][data-day="C"]');await W(400);
+ {const names=await pg.$$eval('#sh .ex, #sh .sets.simple',x=>x.map(e=>e.textContent));ok(P+'resuming an older session drops moves that left the day, keeps the rest',names.some(n=>n.includes('Speed Smith squat'))&&!names.some(n=>/Stale PT move|Old warm-up move/.test(n)),names.join(' | '));}
+ await pg.tap('[data-w="close"]');await W(300);
  await pg.evaluate(t=>{for(const id of [t,t+'~P']){delete __store['liftlog/'+id];__rt({eventType:'DELETE',old:{coll:'liftlog',id}});}},tday);await W(300);
  const nextWk=await pg.$eval('.wkb[aria-label="Next week"]',e=>e.dataset.sday);await pg.tap('.wkb[aria-label="Next week"]');await W(250);
  ok(P+'week arrows move a week',(await pg.getAttribute('.wd.on','data-sday'))===nextWk&&(await pg.$$('.wd')).length===7);
@@ -133,6 +137,7 @@ for(const scheme of ['light','dark']){
  ok(P+'Lifts no longer repeats the strength chart',!(await pg.textContent('#view')).includes('Strength progress')&&(await pg.textContent('#view')).includes('History'));await pg.tap('[data-pseg="runs"]');await W(200);
  await pg.tap('[data-act="rundetail"] >> nth=0');await W(250);ok(P+'tapping a run opens its detail',(await pg.$$eval('.sh .row .t',x=>x.map(e=>e.textContent))).join(',').includes('Avg heart rate'));await pg.tap('.sh [data-act="close"]');await W(200);
  await pg.tap('[data-pseg="lifts"]');await W(200);ok(P+'Plan shows lifts',!!(await pg.$('[data-lday="A"]')));
+ await pg.tap('[data-lday="P"]');await W(150);ok(P+'PT chip on Plan opens the checklist, never a workout',!!(await pg.$('[data-act="ptsess"]'))&&!(await pg.$('[data-act="workout"][data-day="P"]')));await pg.tap('[data-lday="A"]');await W(150);
  await pg.evaluate(()=>{location.hash='runs';});await W(250);ok(P+'old #runs link opens Plan > Runs',(await pg.getAttribute('[data-pseg="runs"]','aria-pressed'))==='true');
  await pg.tap('.tab[data-tab="today"]');await W(250);
  // PT editor (from the home PT sheet)
