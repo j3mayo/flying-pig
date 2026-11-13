@@ -542,8 +542,8 @@ function dayItems(d){
     out.push({k:"warm", when:"Before the run", title:tt?"Warm-up · 15 to 20 min":"Warm-up · 5 min", sub:w.all?"Done":w.n?`${w.n} of ${w.list.length} done`:tt?"Easy running, drills, 4 strides":"Walk, leg swings, lunges, high knees", done:w.all||rr.length>0});
     out.push({k:"run", when:p.run.long?"Long run":"Run", title:shortRun(p.run), sub:rr.length?(rr[0].awaitWatch?"Done · waiting for the watch":`${r1(sum(rr.map(r=>r.miles)))} mi · ${paceMi(pace(tot(rr)))}${rr[0].avgHR?" · HR "+rr[0].avgHR:""}`):tt?"All out · even pacing":runTarget(p.run).split(" · ")[0], sub2:!rr.length&&!tt?runTarget(p.run).split(" · ")[1]||"":"", done:rr.length>0, runId:rr.length?rr[0].id:null}); }
   else if(runsOn(d).length){ const rr=runsOn(d); out.push({k:"run", when:"Run", title:`Run · ${r1(sum(rr.map(r=>r.miles)))} mi`, sub:`${paceMi(pace(tot(rr)))}${rr[0].avgHR?" · HR "+rr[0].avgHR:""}`, done:true, runId:rr[0].id}); }
-  if(p.extra){ const l=sessOn(d,"P"), n=exFor("P").length;
-    out.push({k:"pt", day:"P", when:p.run&&p.run.miles>0?"After the run":"PT session", title:`PT Session${n?" · "+n+" moves":""}`, sub:String(p.extra).replace(/^PT:\s*/,""), done:!!l&&l.status!=="in_progress", open:!!l&&l.status==="in_progress", has:n>0}); }
+  if(p.extra){ const ex=exFor("P"), n=ex.length, got=ptSessDone(d), k=ex.filter(e=>got.has(e.id)).length;
+    out.push({k:"pt", day:"P", when:p.run&&p.run.miles>0?"After the run":p.lift?"After the lift":"PT", title:`PT${n?" · "+n+" moves":""}`, sub:n&&k>=n?"All done":k?`${k} of ${n} done`:ex.map(e=>e.name).join(", ")||String(p.extra).replace(/^PT:\s*/,""), done:n>0&&k>=n, has:n>0}); }
   if(p.soccer) out.push({k:"soc", when:"Soccer", title:"Soccer", sub:"Full intensity · counts as a hard day", done:!!(S.daily[d]&&S.daily[d].soccer)});
   home("day"); home("pm");
   return out; }
@@ -551,6 +551,7 @@ const KCOL={warm:"var(--run)", run:"var(--run)", lift:"var(--lift)", pt:"var(--p
 function itemBtn(x, d){ const t=todayISO();
   if(x.k==="soc"){ if(x.done) return `<button class="tl-ok" type="button" style="color:${KCOL.soc}" data-act="soccertick" data-d="${d}" aria-label="Soccer played, tap to undo">${CHECK}</button>`; return d<=t?`<button class="go grey" type="button" data-act="soccertick" data-d="${d}">Mark played</button>`:""; }
   if(x.done&&x.k==="run"&&x.runId) return `<button class="tl-ok" type="button" style="color:${KCOL.run}" data-act="rundetail" data-id="${esc(x.runId)}" aria-label="Run details">${CHECK}</button>`;
+  if(x.k==="pt") return d>t?`<button class="go grey" type="button" data-act="liftsheet" data-view="1" data-day="P">View</button>`:x.has?`<button class="go grey" type="button" data-act="ptsess" data-d="${d}">${x.done?"Edit":"Check off"}</button>`:"";
   if(x.done&&x.k!=="home") return `<span class="tl-ok" style="color:${KCOL[x.k]}" aria-label="Done">${CHECK}</span>`;
   if(x.k==="warm") return d===t?`<button class="go grey" type="button" data-act="warmup" data-d="${d}">${x.done?"Edit":"Check off"}</button>`:d>t?`<button class="go grey" type="button" data-act="runsheet" data-d="${d}">View</button>`:"";
   if(x.k==="home") return d===t?`<button class="go grey" type="button" data-act="ptslot" data-slot="${x.slot}">${x.done?"Edit":"Check off"}</button>`:"";
@@ -621,6 +622,25 @@ function viewToday(){
   ${rec.length?`<div class="sec-h" style="margin-top:22px"><h2>Recovery</h2><span class="ms-when">${recDone} of ${rec.length} done</span></div><div class="tl rec">${tlr}</div>`:""}
   ${p.note?`<div class="foot" style="padding:2px 4px 0">${esc(p.note)}</div>`:""}
   ${d===t?`<button class="ckin${checked?" did":""}" type="button" data-act="checkin">${checked?`${CHECK}Checked in`:`<i></i>Check in · 30 sec`}</button>`:""}`; }
+/* PT gym moves (Day P loads) are one checklist on every PT day, Mon, Wed and Fri alike: one tap per move, saved as a
+   manual session row liftlog/{date}~P {day:"P", source:"manual", done:[{id, load, scheme}]}. */
+function ptSessDone(d){ const s=sessOn(d,"P"); if(!s) return new Set();
+  if(Array.isArray(s.done)) return new Set(s.done.map(x=>x.id));
+  return new Set((s.exercises||[]).filter(e=>(e.sets||[]).some(x=>x.done)).map(e=>String(e.id).split("~")[0])); }
+function ptSessSheet(day){ const t=day||todayISO(), keep=(sh.querySelector(".sh-body")||{}).scrollTop||0, ex=exFor("P"), got=ptSessDone(t), k=ex.filter(e=>got.has(e.id)).length, all=ex.length>0&&k>=ex.length;
+  const row=e=>{ const on=got.has(e.id), sub=[e.load&&e.load!=="BW"?e.load:"", e.scheme, e.hold].filter(Boolean).join(" · ");
+    return `<button type="button" class="pti" data-act="ptsesstick" data-id="${esc(e.id)}" aria-pressed="${on}"><span class="box">${CHECK}</span><span class="main"><span class="t">${esc(e.name)}</span>${sub?`<span class="s">${esc(sub)}</span>`:""}</span></button>`; };
+  openSheet(navBar(navBtn("close","Done"),`PT<small>${k} of ${ex.length} done</small>`,navBtn("ptedit","Edit"))+`<div class="sh-body"><div class="group ptl">${ex.map(row).join("")||'<div class="empty">No PT moves yet.</div>'}</div>
+    ${ex.length?`<button type="button" class="ptall${all?" undo":""}" data-act="ptsessall">${all?"Clear all":"Mark all done"}</button>`:""}
+    <div class="foot">Weights and reps from your PT plan.</div></div>`);
+  delete sh.dataset.slot; sh.dataset.pdate=t; sh.dataset.ptsess="1"; const b=sh.querySelector(".sh-body"); if(b&&day) b.scrollTop=keep; }
+async function ptSessTick(id, all){ const t=sh.dataset.pdate||todayISO(), ex=exFor("P"), got=ptSessDone(t);
+  if(all){ const every=ex.every(e=>got.has(e.id)); got.clear(); if(!every) ex.forEach(e=>got.add(e.id)); } else if(got.has(id)) got.delete(id); else got.add(id);
+  const ses=sessOn(t,"P"), key=ses?(Object.keys(S.liftlog).find(k=>S.liftlog[k]===ses)||t+"~P"):t+"~P", ref=db.collection("liftlog").doc(key);
+  const done=ex.filter(e=>got.has(e.id)).map(e=>({id:e.id, load:e.load||"", scheme:e.scheme||""})), every=ex.length>0&&done.length>=ex.length;
+  const p=done.length?ref.set({date:t, day:"P", source:"manual", status:every?"done":"in_progress", done}):ref.delete();
+  if(all) toast(every?"PT done":"Cleared");
+  ptSessSheet(t); try{ await p; }catch(err){ failed(err); if(dlg.open&&sh.dataset.ptsess) ptSessSheet(t); } }
 function ptSlotSheet(slot, day){ const t=day||todayISO(), keep=(sh.querySelector(".sh-body")||{}).scrollTop||0, x=ptSlot(t,slot), got=(S.daily[t]&&S.daily[t].pt)||{}, log=(S.daily[t]&&S.daily[t].ptLog)||{};
   const row=it=>{ const tg=+it.target||1, on=(got[it.id]||0)>=tg, sub=[it.dose, it.freq].filter(Boolean).join(" · ");
     return `<button type="button" class="pti" data-act="pttick" data-id="${esc(it.id)}" aria-pressed="${on}"><span class="box">${CHECK}</span><span class="main"><span class="t">${esc(it.name)}</span>${sub?`<span class="s">${esc(sub)}</span>`:""}</span></button>`; };
@@ -925,7 +945,7 @@ window.addEventListener("scroll",()=>{ $("#nav").classList.toggle("scrolled", wi
 /* ---------- sheets ---------- */
 const dlg=$("#dlg"), sh=$("#sh");
 sh.addEventListener("change", e=>{ const n=e.target.closest("textarea[data-ptnote]"); if(n){ ptNote(n.dataset.ptnote, n.value); } });
-function openSheet(html, full){ dlg.className = full?"full":"sheet"; delete sh.dataset.slot; delete sh.dataset.pdate; delete sh.dataset.warm; sh.innerHTML=html; const tt=sh.querySelector(".ttl"); sh.dataset.key=(tt?tt.textContent:"")+"|"+((sh.querySelector("[data-i]")||{}).dataset||{}).i; draftRestore(); if(!dlg.open) dlg.showModal(); try{ sh.focus({preventScroll:true}); }catch(_){} }
+function openSheet(html, full){ dlg.className = full?"full":"sheet"; delete sh.dataset.slot; delete sh.dataset.pdate; delete sh.dataset.warm; delete sh.dataset.ptsess; sh.innerHTML=html; const tt=sh.querySelector(".ttl"); sh.dataset.key=(tt?tt.textContent:"")+"|"+((sh.querySelector("[data-i]")||{}).dataset||{}).i; draftRestore(); if(!dlg.open) dlg.showModal(); try{ sh.focus({preventScroll:true}); }catch(_){} }
 function closeSheet(){ if(dlg.open) dlg.close(); }
 const navBar=(l,title,r)=>`<div class="sh-nav"><div class="l">${l||""}</div><div class="ttl">${title}</div><div class="r">${r||""}</div></div>`;
 const navBtn=(act,label,extra)=>`<button class="nav-btn" type="button" data-act="${act}" ${extra||""}>${label}</button>`;
@@ -1549,7 +1569,7 @@ document.addEventListener("click", e=>{
   if(!db){ toast("Saving isn't available here"); return; }
   ({allruns:allRunsSheet, healthwhy:healthWhySheet, fueltime:()=>fuelTimeSheet(+a.dataset.i||0), tailored:tailoredSheet, alllifts:allLiftsSheet, fuelinfo:()=>fuelInfoSheet(a.dataset.i), logrun:()=>runForm(a.dataset.d), logday:dayForm, loglift:liftForm, feelsave:saveFeel, runsheet:()=>runSheet(a.dataset.d), checkin:checkinSheet, warmup:()=>warmSheet(a.dataset.d), warmtick:()=>warmTick(a.dataset.id), metric:()=>metricSheet(a.dataset.k), mrange:()=>{ mRange=+a.dataset.n||90; metricSheet(a.dataset.k); }, sug:()=>sugSheet(a.dataset.id), rundetail:()=>runDetail(a.dataset.id), notfeeling:notFeelingSheet, nfsend:sendNotFeeling,
     nfpick:()=>{ nfPick=NF[+a.dataset.i]||""; sh.querySelectorAll('[data-act="nfpick"]').forEach(b=>b.setAttribute("aria-pressed", b===a)); }, ptslot:()=>ptSlotSheet(a.dataset.slot), updates:updList, checkins:checkinList, reqsave:saveReq,
-    pttick:()=>ptTick(a.dataset.id), ptall:ptAll, soccertick:async()=>{ const d=a.dataset.d, cur=Object.assign({}, S.daily[d]||{}); const on=!cur.soccer; const p=db.collection("daily").doc(d).set(Object.assign(cur,{date:d, soccer:on})); toast(on?"Soccer logged":"Soccer unmarked"); try{ await p; }catch(err){ failed(err); } },
+    pttick:()=>ptTick(a.dataset.id), ptall:ptAll, ptsess:()=>ptSessSheet(a.dataset.d), ptsesstick:()=>ptSessTick(a.dataset.id), ptsessall:()=>ptSessTick(null,true), soccertick:async()=>{ const d=a.dataset.d, cur=Object.assign({}, S.daily[d]||{}); const on=!cur.soccer; const p=db.collection("daily").doc(d).set(Object.assign(cur,{date:d, soccer:on})); toast(on?"Soccer logged":"Soccer unmarked"); try{ await p; }catch(err){ failed(err); } },
     runquick:()=>quickRun(a.dataset.d), rundone:()=>quickRun(a.dataset.d), rundel:()=>runDel(a.dataset.id),    paces:pacesSheet, pacesave:savePaces, thread:coachThread, threadsend:async()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; await saveReq(); coachThread(); }, ready:readySheet, push:pushToggle, watchsync:watchSheet, copyurl:()=>{ const t=($("#haeUrl")||{}).textContent||""; if(!/^https:/.test(t)){ toast("No URL yet"); return; } (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("Copied"),()=>toast("Couldn't copy")); }, pweek:()=>pweekSheet(a.dataset.w), newreq:()=>reqForm(a.dataset.pre), reqtpl:()=>{ const t=$("#reqText"); if(!t) return; const cur=t.value.trim(); t.value=cur?cur+"\n"+a.dataset.t:a.dataset.t; reqDraft.text=t.value; t.focus(); t.setSelectionRange(t.value.length,t.value.length); }, attach:()=>$("#fileIn").click(), attdel:()=>{ const t=$("#reqText"); if(t) reqDraft.text=t.value; reqDraft.files.splice(+a.dataset.i,1); $("#attList").innerHTML=attHtml(); },
     gear:()=>gearSheet(a.dataset.id), gearsave:()=>saveGear(a.dataset.id), gearretire:()=>saveGear(a.dataset.id,true), ms:msSheet, mssave:saveMs, req:()=>reqSheet(a.dataset.id), upd:()=>updSheet(a.dataset.id), exinfo:()=>exSheet(a.dataset.id),
     goal:()=>goalSheet(a.dataset.i), goalsave:()=>saveGoal(a.dataset.i), goaldel:()=>saveGoal(a.dataset.i,true),

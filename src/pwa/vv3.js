@@ -51,7 +51,7 @@ for(const scheme of ['light','dark']){
  ok(P+'back to today',!(await pg.$('.lnk.back')));
  await pg.evaluate(t=>{__store['plan/'+t]=Object.assign({},__store['plan/'+t]||{},{date:t,run:{miles:3,label:'Easy 3 mi'},lift:'C',extra:'PT: shrug',soccer:false});__rt({eventType:'UPDATE',new:{coll:'plan',id:t,data:__store['plan/'+t]}});},tday);await W(300);
  const acts=await pg.$$eval('.tlc .go',x=>x.map(e=>e.dataset.act+':'+(e.dataset.day||'')+':'+e.textContent));
- ok(P+'run gets Log Run, lift and PT session get Start',acts.some(a=>a.startsWith('rundone::Mark done'))&&acts.some(a=>/^workout:C:(Start|Resume)/.test(a))&&acts.some(a=>/^workout:P:(Start|Resume)/.test(a)),acts.join(' | '));
+ ok(P+'run gets Mark done, lift gets Start, PT gets a Check off list',acts.some(a=>a.startsWith('rundone::Mark done'))&&acts.some(a=>/^workout:C:(Start|Resume)/.test(a))&&acts.some(a=>/^ptsess::(Check off|Edit)/.test(a))&&!acts.some(a=>/^workout:P:/.test(a)),acts.join(' | '));
  const order=await pg.$$eval('.tl:not(.rec) .tlc .t',x=>x.map(e=>e.textContent.toLowerCase()));
  ok(P+'warm-up sits right before the run',(()=>{const i=order.findIndex(k=>k.includes('warm-up'));return i>=0&&order[i+1]&&/\d mi/.test(order[i+1]);})(),order.join(','));
  ok(P+'no eyebrow label above card titles',await pg.$$eval('.tlc .main',x=>x.every(m=>m.firstElementChild&&m.firstElementChild.classList.contains('t'))));
@@ -63,10 +63,14 @@ for(const scheme of ['light','dark']){
  ok(P+'finished warm-up fades, says Done, and is no longer up next',(await pg.$$eval('.tli.done',x=>x.map(e=>e.querySelector('.t').textContent.toLowerCase()))).some(c=>c.startsWith('done')&&c.includes('warm-up'))&&!(await pg.textContent('.tli.next .t')).toLowerCase().includes('warm-up')&&(await pg.textContent('.tli.next .k'))==='Up next');
  ok(P+'Day C comes before the run',order.findIndex(k=>k.includes('day c'))>=0&&order.findIndex(k=>k.includes('day c'))<order.findIndex(k=>/\d mi/.test(k)),order.join(','));
  await pg.evaluate(t=>{const row={date:t,day:'C',status:'done',exercises:[{id:'c1',name:'Speed Smith squat',sets:[{load:'95',reps:'3',done:true}]}]};__store['liftlog/'+t]=row;__rt({eventType:'INSERT',new:{coll:'liftlog',id:t,data:row}});},tday);await W(300);
- await pg.tap('.tlc [data-act="workout"][data-day="P"]');await W(400);
- ok(P+'PT session starts on a day a lift is already logged',await pg.evaluate(()=>document.getElementById('dlg').open)&&(await pg.textContent('.sh-nav .ttl')).startsWith('PT Session'));
- await pg.tap('[data-w="tick"] >> nth=1');await W(200);await pg.tap('[data-w="finish"] >> nth=0');await W(500);
- ok(P+'both sessions are kept for the day',await pg.evaluate(t=>__store['liftlog/'+t].day==='C'&&__store['liftlog/'+t+'~P']&&__store['liftlog/'+t+'~P'].day==='P'&&__store['liftlog/'+t+'~P'].date===t&&!('docId' in __store['liftlog/'+t+'~P']),tday));
+ await pg.tap('.tl.rec [data-act="ptsess"]');await W(400);
+ ok(P+'PT opens as a checklist of the PT moves, not a workout',await pg.evaluate(()=>document.getElementById('dlg').open)&&(await pg.textContent('.sh-nav .ttl')).startsWith('PT')&&(await pg.$$('.sh .pti[data-act="ptsesstick"]')).length>=2&&!(await pg.$('.sh [data-w]')));
+ await pg.tap('.sh [data-act="ptsesstick"] >> nth=0');await W(200);
+ ok(P+'one tap checks a PT move off and saves it as its own session',await pg.evaluate(t=>{const r=__store['liftlog/'+t+'~P'];return !!r&&r.day==='P'&&r.source==='manual'&&r.date===t&&r.done.length===1&&r.status==='in_progress';},tday)&&(await pg.textContent('.sh-nav .ttl small')).startsWith('1 of'));
+ await pg.screenshot({path:out+'-'+scheme+'-pt-checklist.png'});
+ await pg.tap('.sh [data-act="ptsessall"]');await W(250);
+ ok(P+'both sessions are kept for the day',await pg.evaluate(t=>__store['liftlog/'+t].day==='C'&&__store['liftlog/'+t+'~P']&&__store['liftlog/'+t+'~P'].status==='done',tday));
+ await pg.tap('.sh [data-act="close"]');await W(250);
  ok(P+'timeline shows both as done',(await pg.$$('.tli.done')).length>=2);
  await pg.evaluate(t=>{for(const id of [t,t+'~P']){delete __store['liftlog/'+id];__rt({eventType:'DELETE',old:{coll:'liftlog',id}});}},tday);await W(300);
  const nextWk=await pg.$eval('.wkb[aria-label="Next week"]',e=>e.dataset.sday);await pg.tap('.wkb[aria-label="Next week"]');await W(250);
@@ -355,7 +359,7 @@ for(const scheme of ['light','dark']){
  await pg.tap('.tab[data-tab="today"]');await W(250);
  ok(P+'check-in button sits in the page, not floating',await pg.$eval('.ckin',e=>getComputedStyle(e).position!=='fixed'));
  ok(P+'Today has no coach-log row',!(await pg.$('#view [data-act="updates"]')));
- ok(P+'PT lives in its own Recovery section under the training timeline',!!(await pg.$('.tl.rec'))&&(await pg.$$('.tl.rec [data-act="ptslot"], .tl.rec [data-act="workout"][data-day="P"]')).length>=1&&!(await pg.$('.tl:not(.rec) [data-act="ptslot"]'))&&(await pg.textContent('#view')).includes('Recovery'));
+ ok(P+'PT lives in its own Recovery section under the training timeline',!!(await pg.$('.tl.rec'))&&(await pg.$$('.tl.rec [data-act="ptslot"], .tl.rec [data-act="ptsess"]')).length>=1&&!(await pg.$('.tl:not(.rec) [data-act="ptslot"]'))&&(await pg.textContent('#view')).includes('Recovery'));
  ok(P+'week arrows live in the week card',(await pg.$$('.wkc .wkb[aria-label="Previous week"], .wkc .wkb[aria-label="Next week"]')).length===2);
  ok(P+'active tab shows its filled glyph',await pg.evaluate(()=>{const on=document.querySelector('.tab[aria-current="page"] svg .f'),off=document.querySelector('.tab:not([aria-current="page"]) svg .f');return !!on&&getComputedStyle(on).display!=='none'&&!!off&&getComputedStyle(off).display==='none';}));
  ok(P+'cards share one radius',await pg.$$eval('.group, .tlc, .bars, .wkc',x=>x.length>3&&x.every(e=>getComputedStyle(e).borderRadius==='14px')));
