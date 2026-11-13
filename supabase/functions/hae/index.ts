@@ -46,6 +46,40 @@ const METRICS: Record<string, [string, (item: Record<string, unknown>, units: st
   step_count: ["steps", (i) => (num(i.qty) == null ? null : Math.round(num(i.qty)!))],
 };
 
+// Sleep sent as raw stage samples (one item per Core / Deep / REM / Awake stretch, no totalSleep) instead of one
+// summary per night: add the asleep stages up per night. A night belongs to the date it ends on; a stretch that
+// ends in the evening (after 6 PM) belongs to the next morning's night.
+const isSegment = (i: Record<string, unknown>) =>
+  i.totalSleep == null && i.core == null && (i.value != null || i.stage != null || i.endDate != null || i.end != null);
+function nightOf(end: string): string | null {
+  const d = localDate(end);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+  if (Number(end.slice(11, 13)) < 18) return d;
+  const n = new Date(d + "T12:00:00Z");
+  n.setUTCDate(n.getUTCDate() + 1);
+  return n.toISOString().slice(0, 10);
+}
+function sleepFromSegments(items: Array<Record<string, unknown>>, units: string): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const i of items) {
+    if (!isSegment(i)) continue;
+    const stage = String(i.value ?? i.stage ?? "");
+    if (!/core|deep|rem|asleep/i.test(stage)) continue; // awake and in-bed time are not sleep
+    const end = String(i.endDate ?? i.end ?? i.date ?? "");
+    const night = nightOf(end);
+    let h = num(i.qty);
+    if (h == null) {
+      const a = Date.parse(String(i.startDate ?? i.start ?? "").replace(" ", "T").replace(/ ([+-]\d{2})(\d{2})$/, "$1:$2"));
+      const b = Date.parse(end.replace(" ", "T").replace(/ ([+-]\d{2})(\d{2})$/, "$1:$2"));
+      h = Number.isFinite(a) && Number.isFinite(b) ? (b - a) / 3600000 : null;
+    } else if (/min/i.test(units)) h = h / 60;
+    else if (/^s|sec/i.test(units)) h = h / 3600;
+    if (!night || h == null || h <= 0) continue;
+    out[night] = (out[night] || 0) + h;
+  }
+  return out;
+}
+
 async function ownerId(): Promise<string> {
   const { data, error } = await sb.auth.admin.listUsers({ perPage: 10 });
   if (error) throw error;
@@ -82,12 +116,21 @@ Deno.serve(async (req: Request) => {
 
   // ---- daily metrics: fill only empty fields
   const dailyPatch: Record<string, Record<string, unknown>> = {};
+  let sleepSample: Record<string, unknown> | null = null; // shape of the sleep items, kept in settings/import so a wrong number can be traced
   for (const m of metrics) {
     const spec = METRICS[String(m.name || "")];
     if (!spec) continue;
     const [field, fn] = spec;
     const units = String(m.units || "");
+    if (field === "sleep") {
+      const items = (m.data || []) as Array<Record<string, unknown>>;
+      sleepSample = { n: items.length, keys: Object.keys(items[0] || {}).sort(), units };
+      for (const [d, h] of Object.entries(sleepFromSegments(items, units))) {
+        (dailyPatch[d] ||= {}).sleep = Math.max(Number(dailyPatch[d].sleep || 0), r1(h));
+      }
+    }
     for (const item of (m.data || []) as Array<Record<string, unknown>>) {
+      if (field === "sleep" && isSegment(item)) continue;
       const d = localDate(String(item.date || ""));
       if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
       const v = fn(item, units);
@@ -225,7 +268,7 @@ Deno.serve(async (req: Request) => {
     const { error } = await sb.from("docs").update({ data: r.data }).eq("coll", "runs").eq("id", r.id);
     if (error) return json({ ok: false, error: error.message }, 500);
   }
-  const stamp = { lastAt: new Date().toISOString(), source: "hae", runsAdded: runWrites.length, runsUpdated: runUpdates.length, days: summary.days };
+  const stamp = { lastAt: new Date().toISOString(), source: "hae", runsAdded: runWrites.length, runsUpdated: runUpdates.length, days: summary.days, ...(sleepSample ? { sleepShape: sleepSample } : {}) };
   await sb.from("docs").upsert([{ owner, coll: "settings", id: "import", data: stamp }], { onConflict: "coll,id" });
   return json(summary);
 });
